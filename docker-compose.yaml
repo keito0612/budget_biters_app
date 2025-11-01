@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  expo:
+    build: .
+    tty: true
+    environment:
+      - NODE_ENV=development
+      - REACT_NATIVE_PACKAGER_HOSTNAME=10.41.242.8
+    ports:
+      - "19006:19006"
+    volumes:
+      - ./app:/usr/src/app
+    working_dir: /usr/src/app
+
+volumes:
+  node_modules:
