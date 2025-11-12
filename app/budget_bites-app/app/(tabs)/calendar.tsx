@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import { MealPlanRepository } from '../../lib/repositories';
-import { DailyMenuModal } from '../../components/DailyMenuModal';
-import type { MealPlan } from '../../lib/types';
+import { ServiceFactory } from '../../factories/serviceFactory';
+
 
 export default function CalendarScreen() {
-    const [selectedDate, setSelectedDate] = useState('');
     const [markedDates, setMarkedDates] = useState({});
-    const [modalVisible, setModalVisible] = useState(false);
-    const [selectedMeal, setSelectedMeal] = useState<MealPlan | null>(null);
-    const mealPlanRepository = new MealPlanRepository();
 
     useEffect(() => {
         loadMonthData();
@@ -19,13 +14,12 @@ export default function CalendarScreen() {
     const loadMonthData = async () => {
         const today = new Date();
         const month = today.toISOString().substring(0, 7);
-        const startDate = `${month}-01`;
-        const endDate = `${month}-31`;
 
-        const plans = await mealPlanRepository.findByDateRange(startDate, endDate);
+        const mealPlanRepo = ServiceFactory.getMealPlanRepository();
+        const plans = await mealPlanRepo.findByDateRange(`${month}-01`, `${month}-31`);
 
         const marked: any = {};
-        plans.forEach((plan) => {
+        plans.forEach((plan: any) => {
             if (!marked[plan.date]) {
                 marked[plan.date] = { marked: true, dotColor: '#007AFF' };
             }
@@ -34,36 +28,17 @@ export default function CalendarScreen() {
         setMarkedDates(marked);
     };
 
-    const handleDayPress = async (day: any) => {
-        setSelectedDate(day.dateString);
-        const meals = await mealPlanRepository.findByDate(day.dateString);
-        if (meals.length > 0) {
-            setSelectedMeal(meals[0]);
-            setModalVisible(true);
-        }
-    };
-
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>献立カレンダー</Text>
             </View>
-
             <Calendar
                 markedDates={markedDates}
-                onDayPress={handleDayPress}
                 theme={{
                     todayTextColor: '#007AFF',
                     selectedDayBackgroundColor: '#007AFF',
-                    selectedDayTextColor: 'white',
                 }}
-            />
-
-            <DailyMenuModal
-                visible={modalVisible}
-                onClose={() => setModalVisible(false)}
-                meal={selectedMeal}
-                onRefresh={loadMonthData}
             />
         </View>
     );

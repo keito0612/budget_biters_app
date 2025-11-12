@@ -1,191 +1,172 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GenerateMealPlanParams, getMealTypeJa, MealExecutionLog, RegenerateMealParams, UserPreferences } from '../types/gimi.types';
-import { DateUtils } from '../utils/DateUtils';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-export async function generateMealPlan(params: GenerateMealPlanParams) {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+import { Config } from '../constants/config';
+import { Budget, MealPlan, Preferences } from '../types/types';
+import { GoogleGenAI } from "@google/genai";
 
-    const prompt = generateMonthlyMealPlanPrompt(params);
+export interface GeminiMealPlanRequest {
+  month: string;
+  budget: Budget;
+  preferences: Preferences;
+  existingPlans?: MealPlan[];
+}
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+export interface GeminiResponse {
+  plans: Omit<MealPlan, 'id' | 'created_at' | 'updated_at'>[];
+}
 
-    // JSONパース
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-        throw new Error('Invalid AI response format');
+// const ai = new GoogleGenAI({});
+
+export class GeminiService {
+  private static apiKey = Config.gemini.apiKey;
+  private static endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent`;
+
+  static async generateMonthlyMealPlan(
+    request: GeminiMealPlanRequest
+  ): Promise<GeminiResponse> {
+    const prompt = this.buildMonthlyPrompt(request);
+    const response = await fetch(`${this.endpoint}?key=${this.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 8192,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.statusText}`);
     }
 
-    const data = JSON.parse(jsonMatch[0]);
+    const data = await response.json();
+    const text = data.candidates[0].content.parts[0].text;
 
-    return data;
-}
-
-
-export async function regenerateMeal(params: RegenerateMealParams) {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const prompt = regenerateDailyMealPrompt(params);
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-        throw new Error('Invalid AI response format');
+      throw new Error('JSONレスポンスの解析に失敗しました');
     }
 
-    const data = JSON.parse(jsonMatch[0]);
-
-    return data;
-}
-
-const generateMonthlyMealPlanPrompt = (params: GenerateMealPlanParams) => `
-あなたは栄養士かつ料理研究家です。以下の条件で1ヶ月分の献立を作成してください。
-
-【条件】
-- 対象: ${params.year}年${params.month}月 (${DateUtils.getDaysInMonth(params.year, params.month)}日間)
-- 月間予算: ¥${params.budget}
-- 1日3食 (朝・昼・晩)
-- 味付け設定: ${JSON.stringify(params.preferences.taste_preferences)}
-- アレルギー: ${params.preferences.allergies.join(', ') || 'なし'}
-- 食事制限: ${params.preferences.dietary_restrictions.join(', ') || 'なし'}
-- 調理レベル: ${params.preferences.cooking_skill_level}
-
-【過去の実行ログ】
-${params.pastLogs ? formatPastLogs(params.pastLogs) : '初回生成'}
-
-【出力形式】
-以下のJSON形式で返してください:
-
-{
-  "mealPlans": [
-    {
-      "date": "YYYY-MM-DD",
-      "breakfast": {
-        "menuName": "献立名",
-        "ingredients": [
-          { "name": "材料名", "amount": "分量", "cost": 金額(整数) }
-        ],
-        "recipeSteps": ["手順1", "手順2", ...],
-        "estimatedCost": 合計金額,
-        "cookingTime": 調理時間(分),
-        "nutrition": {
-          "calories": カロリー,
-          "protein": たんぱく質(g),
-          "carbs": 炭水化物(g),
-          "fat": 脂質(g)
-        }
-      },
-      "lunch": { ... },
-      "dinner": { ... }
-    },
-    ...
-  ],
-  "totalCost": 月間合計金額,
-  "tips": ["節約のコツ1", "栄養バランスのポイント2", ...]
-}
-
-【重要な制約】
-- 予算内に収める
-- アレルギー食材は絶対に使用しない
-- 調理レベルに合った難易度
-- 栄養バランスを考慮
-- 季節の食材を活用
-- 同じメニューは週に1回まで
-`;
-
-function regenerateDailyMealPrompt(params: RegenerateMealParams): string {
-    const mealType = getMealTypeJa(params.mealType);
-    return regenerateDailyMealPromptText(params, mealType);
-}
-
-const regenerateDailyMealPromptText = (params: RegenerateMealParams, mealTypeText: string) => {
-    return (`以下の献立を別の献立に変更してください。
-
-【現在の献立】
-日付: ${params.date}
-食事: ${mealTypeText}
-メニュー: ${params.currentMeal.menu_name}
-費用: ¥${params.currentMeal.estimated_cost}
-材料: ${params.currentMeal.ingredients.map(i => i.name).join(', ')}
-
-【条件】
-- 残り予算: ¥${params.remainingBudget}
-- 同じ食材は可能な限り避ける
-- 味付け・アレルギー設定は以下を維持:
-  - 塩味: ${params.preferences.taste_preferences.salty}/10
-  - 甘味: ${params.preferences.taste_preferences.sweet}/10
-  - 辛味: ${params.preferences.taste_preferences.spicy}/10
-  - アレルギー: ${params.preferences.allergies.join(', ') || 'なし'}
-- 費用は現在と同程度か安く
-- 調理レベル: ${params.preferences.cooking_skill_level}
-
-【出力形式】
-以下のJSON形式で返してください（コードブロックなし、純粋なJSONのみ）:
-
-{
-  "menuName": "新しい献立名",
-  "ingredients": [
-    { "name": "材料名", "amount": "分量", "cost": 金額 }
-  ],
-  "recipeSteps": ["手順1", "手順2"],
-  "estimatedCost": 金額,
-  "cookingTime": 時間(分),
-  "nutrition": {
-    "calories": カロリー,
-    "protein": たんぱく質(g),
-    "carbs": 炭水化物(g),
-    "fat": 脂質(g)
+    const result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    return result;
   }
-}`);
+
+  static async regenerateDailyMeal(
+    date: string,
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    request: GeminiMealPlanRequest
+  ): Promise<Omit<MealPlan, 'id' | 'created_at' | 'updated_at'>> {
+    const prompt = this.buildDailyPrompt(date, mealType, request);
+
+    const response = await fetch(`${this.endpoint}?key=${this.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.8,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates[0].content.parts[0].text;
+
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('JSONレスポンスの解析に失敗しました');
+    }
+
+    const result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    return result;
+  }
+
+  private static buildMonthlyPrompt(request: GeminiMealPlanRequest): string {
+    const { month, budget, preferences } = request;
+    const daysInMonth = new Date(
+      parseInt(month.split('-')[0]),
+      parseInt(month.split('-')[1]),
+      0
+    ).getDate();
+
+    return `あなたは栄養士兼料理人のAIアシスタントです。
+以下の条件に基づいて、${month}の1ヶ月分の献立を生成してください。
+
+【条件】
+- 月間予算: ¥${budget.total_budget.toLocaleString()}
+- 1日あたり予算: ¥${budget.daily_budget.toLocaleString()}
+- 味付け: ${preferences.taste_preference === 'light' ? 'あっさり' : preferences.taste_preference === 'balanced' ? 'バランス' : '濃いめ'}
+- アレルギー: ${preferences.allergies.length > 0 ? preferences.allergies.join(', ') : 'なし'}
+- 避けたい食材: ${preferences.avoid_ingredients.length > 0 ? preferences.avoid_ingredients.join(', ') : 'なし'}
+- 日数: ${daysInMonth}日分
+
+【出力形式】
+以下のJSON形式で、${daysInMonth}日分 × 3食（朝・昼・晩）の献立を返してください。
+
+\`\`\`json
+{
+  "plans": [
+    {
+      "date": "${month}-01",
+      "meal_type": "breakfast",
+      "menu_name": "和風トースト",
+      "ingredients": [
+        { "name": "食パン", "amount": "1枚", "cost": 30 },
+        { "name": "バター", "amount": "10g", "cost": 20 }
+      ],
+      "recipe": ["食パンをトーストする", "バターを塗る"],
+      "nutrition": { "calories": 250, "protein": 5, "fat": 8, "carbs": 40 },
+      "cooking_time": 5,
+      "estimated_cost": 50
+    }
+  ]
 }
+\`\`\``;
+  }
 
+  private static buildDailyPrompt(
+    date: string,
+    mealType: string,
+    request: GeminiMealPlanRequest
+  ): string {
+    const { budget, preferences } = request;
+    const mealTypeJa =
+      mealType === 'breakfast' ? '朝食' : mealType === 'lunch' ? '昼食' : '夕食';
 
+    return `あなたは栄養士兼料理人のAIアシスタントです。
+以下の条件に基づいて、${date}の${mealTypeJa}を1つ生成してください。
 
-/**
- * 過去ログをフォーマット
- */
-function formatPastLogs(logs: MealExecutionLog[]): string {
-    if (!logs || logs.length === 0) {
-        return '過去のログなし（初回生成）';
-    }
-    //実行済みログのみ
-    const executedLogs = logs.filter(log => log.executed);
+【条件】
+- 1食あたり予算: ¥${Math.floor(budget.daily_budget / 3)}
+- 味付け: ${preferences.taste_preference === 'light' ? 'あっさり' : preferences.taste_preference === 'balanced' ? 'バランス' : '濃いめ'}
+- アレルギー: ${preferences.allergies.length > 0 ? preferences.allergies.join(', ') : 'なし'}
+- 避けたい食材: ${preferences.avoid_ingredients.length > 0 ? preferences.avoid_ingredients.join(', ') : 'なし'}
 
-    if (executedLogs.length === 0) {
-        return '実行済みのログなし';
-    }
+【出力形式】
+以下のJSON形式で返してください。
 
-    // 満足度別に分類
-    const highSatisfaction = executedLogs.filter(log => (log.satisfaction_rating || 0) >= 4);
-    const lowSatisfaction = executedLogs.filter(log => (log.satisfaction_rating || 0) <= 2);
-
-    let formatted = '【過去30日間の実績】\n\n';
-
-    if (highSatisfaction.length > 0) {
-        formatted += '好評だったメニュー（満足度4以上）:\n';
-        highSatisfaction.slice(0, 10).forEach(log => {
-            const mealType = getMealTypeJa(log.meal_type);
-            formatted += `- ${log.date} ${mealType}: ${log.actual_menu_name || '不明'} (満足度: ${log.satisfaction_rating}/5)\n`;
-        });
-        formatted += '\n';
-    }
-    if (lowSatisfaction.length > 0) {
-        formatted += '不評だったメニュー（満足度2以下）- これらは避けてください:\n';
-        lowSatisfaction.slice(0, 10).forEach(log => {
-            const mealType = getMealTypeJa(log.meal_type);
-            formatted += `- ${log.date} ${mealType}: ${log.actual_menu_name || '不明'} (満足度: ${log.satisfaction_rating}/5)`;
-            if (log.notes) {
-                formatted += ` - メモ: ${log.notes}`;
-            }
-            formatted += '\n';
-        });
-    }
-
-    return formatted;
+\`\`\`json
+{
+  "date": "${date}",
+  "meal_type": "${mealType}",
+  "menu_name": "メニュー名",
+  "ingredients": [{ "name": "材料名", "amount": "分量", "cost": 価格 }],
+  "recipe": ["手順1", "手順2"],
+  "nutrition": { "calories": 0, "protein": 0, "fat": 0, "carbs": 0 },
+  "cooking_time": 0,
+  "estimated_cost": 0
+}
+\`\`\``;
+  }
 }

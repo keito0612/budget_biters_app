@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AuthService } from '../lib/services/AuthService';
+
+import { AuthRepository, AuthRepositoryImpl } from '../repositories/authRepository';
+import { AuthService } from '../services/authService';
+
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -9,7 +12,8 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const [loading, setLoading] = useState(false);
-    const authService = new AuthService();
+    const authRepository: AuthRepository = new AuthRepositoryImpl;
+    const authService = new AuthService(authRepository);
     const handleSubmit = async () => {
         if (!email || !password) {
             Alert.alert('エラー', 'メールアドレスとパスワードを入力してください');

@@ -5,6 +5,7 @@ export interface MealLogRepository {
     findByMonth: (month: string) => Promise<MealLog[]>;
     findByDateRange: (startDate: string, endDate: string) => Promise<MealLog[]>;
     save: (log: Omit<MealLog, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+    getTotalSpentByMonth: (month: string) => Promise<number>;
 }
 
 export class MealLogRepositoryImpl implements MealLogRepository {

@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function ExpenseScreen() {
+export default function PreferencesScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>支出記録</Text>
+                <Text style={styles.title}>設定</Text>
             </View>
-            <Text style={styles.message}>支出記録画面（実装予定）</Text>
+            <Text style={styles.message}>設定画面（実装予定）</Text>
         </View>
     );
 }

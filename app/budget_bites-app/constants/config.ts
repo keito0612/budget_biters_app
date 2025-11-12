@@ -11,7 +11,7 @@ export const Config = {
     },
     gemini: {
         apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY || '',
-        model: 'gemini-pro',
+        model: 'gemini-2.5-flash',
     },
     premium: {
         monthlyPrice: 400,

@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function TabLayout() {
     return (
@@ -7,28 +8,28 @@ export default function TabLayout() {
                 name="index"
                 options={{
                     title: 'ホーム',
-                    tabBarIcon: () => '🏠',
+                    tabBarIcon: () => <Ionicons name="home-outline" size={30} color={'#fff'} />,
                 }}
             />
             <Tabs.Screen
                 name="calendar"
                 options={{
                     title: 'カレンダー',
-                    tabBarIcon: () => '📅',
+                    tabBarIcon: () => <Ionicons name="home-outline" size={30} color={'#fff'} />,
                 }}
             />
             <Tabs.Screen
                 name="expense"
                 options={{
                     title: '支出',
-                    tabBarIcon: () => '💰',
+                    tabBarIcon: () => <Ionicons name="home-outline" size={30} color={'#fff'} />,
                 }}
             />
             <Tabs.Screen
                 name="profile"
                 options={{
                     title: 'プロフィール',
-                    tabBarIcon: () => '👤',
+                    tabBarIcon: () => <Ionicons name="home-outline" size={30} color={'#fff'} />,
                 }}
             />
         </Tabs>

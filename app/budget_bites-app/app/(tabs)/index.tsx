@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BudgetService, MealPlanService } from '../../lib/services';
 import { usePremium } from '../../hooks/usePremium';
+import { Budget, MealPlan } from '../../types/types';
+import { ServiceFactory } from '../../factories/serviceFactory';
 import { PremiumBadge } from '../../components/PremiumBadge';
-import type { Budget, MealPlan } from '../../lib/types';
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -18,8 +18,8 @@ export default function HomeScreen() {
     }, []);
 
     const loadData = async () => {
-        const budgetService = new BudgetService();
-        const mealPlanService = new MealPlanService();
+        const budgetService = ServiceFactory.createBudgetService();
+        const mealPlanService = ServiceFactory.createMealPlanService();
 
         const budget = await budgetService.getCurrentMonthBudget();
         setCurrentBudget(budget);
@@ -58,18 +58,13 @@ export default function HomeScreen() {
                             <Text style={styles.remaining}>
                                 残り: ¥{budgetStatus.remaining.toLocaleString()}
                             </Text>
-                            <View style={styles.progressBar}>
-                                <View
-                                    style={[styles.progress, { width: `${Math.min(budgetStatus.percentage, 100)}%` }]}
-                                />
-                            </View>
                         </View>
                     )}
                 </>
             ) : (
                 <TouchableOpacity
                     style={styles.setupButton}
-                    onPress={() => router.push('/preference-setup')}
+                    onPress={() => router.push('/preferenceSetUp')}
                 >
                     <Text style={styles.setupText}>初期設定を始める</Text>
                 </TouchableOpacity>
@@ -88,7 +83,6 @@ export default function HomeScreen() {
                                         : '🌙 夕食'}
                             </Text>
                             <Text style={styles.mealName}>{meal.menu_name}</Text>
-                            <Text style={styles.mealCost}>¥{meal.estimated_cost}</Text>
                         </View>
                     ))
                 ) : (
@@ -172,17 +166,6 @@ const styles = StyleSheet.create({
     remaining: {
         fontSize: 16,
         color: '#34C759',
-        marginBottom: 12,
-    },
-    progressBar: {
-        height: 8,
-        backgroundColor: '#eee',
-        borderRadius: 4,
-        overflow: 'hidden',
-    },
-    progress: {
-        height: '100%',
-        backgroundColor: '#007AFF',
     },
     setupButton: {
         margin: 16,
@@ -208,11 +191,6 @@ const styles = StyleSheet.create({
     mealName: {
         fontSize: 16,
         fontWeight: '600',
-        marginTop: 4,
-    },
-    mealCost: {
-        fontSize: 14,
-        color: '#007AFF',
         marginTop: 4,
     },
     generateButton: {
