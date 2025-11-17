@@ -11,8 +11,8 @@ export default function PreferenceSetupScreen() {
 
     const handleSubmit = async () => {
         const budgetNum = parseInt(budget);
-        if (!budgetNum || budgetNum < 1000) {
-            Alert.alert('エラー', '有効な予算を入力してください（最低 ¥1,000）');
+        if (!budgetNum || budgetNum < 10000) {
+            Alert.alert('エラー', '有効な予算を入力してください（最低 ¥1,0000）');
             return;
         }
 

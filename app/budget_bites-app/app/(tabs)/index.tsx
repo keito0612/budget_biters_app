@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { usePremium } from '../../hooks/usePremium';
@@ -34,23 +34,51 @@ export default function HomeScreen() {
         setTodayMeals(meals);
     };
 
+    const MonthBudgetCard = ({ currentBudget }: { currentBudget: Budget | null }) => {
+        return (
+            <View style={styles.card}>
+                <Text style={styles.cardTitle}>今月の予算</Text>
+                <Text style={styles.amount}>
+                    ¥{currentBudget?.total_budget.toLocaleString()}
+                </Text>
+                <Text style={styles.daily}>
+                    1日あたり: ¥{currentBudget?.daily_budget.toLocaleString()}
+                </Text>
+            </View>
+        );
+    };
+
+    const TodayMealItems = ({ meal, index }: { meal: MealPlan, index: number }) => {
+        return (
+            <TouchableOpacity
+                key={index}
+                style={styles.mealItem}
+                onPress={() => router.push({
+                    pathname: '/mealDetail',
+                    params: {
+                        date: meal.date,
+                        mealType: meal.meal_type,
+                    },
+                })}
+            >
+                <Text style={styles.mealType}>
+                    {meal.meal_type === 'breakfast' ? '🌅 朝食' :
+                        meal.meal_type === 'lunch' ? '☀️ 昼食' : '🌙 夕食'}
+                </Text>
+                <Text style={styles.mealName}>{meal.menu_name}</Text>
+                <View style={styles.mealCostContainer}>
+                    <Text style={styles.mealCostText}>金額：</Text>
+                    <Text style={styles.mealCost}> ¥{meal.estimated_cost}</Text>
+                </View>
+                <Text style={styles.viewDetail}>詳細を見る →</Text>
+            </TouchableOpacity>
+        );
+    }
     return (
         <ScrollView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>BudgetMenu</Text>
-                {isPremium && <PremiumBadge />}
-            </View>
-
             {currentBudget ? (
                 <>
-                    <View style={styles.card}>
-                        <Text style={styles.cardTitle}>今月の予算</Text>
-                        <Text style={styles.amount}>¥{currentBudget.total_budget.toLocaleString()}</Text>
-                        <Text style={styles.daily}>
-                            1日あたり: ¥{currentBudget.daily_budget.toLocaleString()}
-                        </Text>
-                    </View>
-
+                    <MonthBudgetCard currentBudget={currentBudget} />
                     {budgetStatus && (
                         <View style={styles.card}>
                             <Text style={styles.cardTitle}>使用状況</Text>
@@ -73,25 +101,19 @@ export default function HomeScreen() {
             <View style={styles.card}>
                 <Text style={styles.cardTitle}>今日の献立</Text>
                 {todayMeals.length > 0 ? (
-                    todayMeals.map((meal, index) => (
-                        <View key={index} style={styles.mealItem}>
-                            <Text style={styles.mealType}>
-                                {meal.meal_type === 'breakfast'
-                                    ? '🌅 朝食'
-                                    : meal.meal_type === 'lunch'
-                                        ? '☀️ 昼食'
-                                        : '🌙 夕食'}
-                            </Text>
-                            <Text style={styles.mealName}>{meal.menu_name}</Text>
-                        </View>
-                    ))
+                    todayMeals.map((meal, index) =>
+                        <TodayMealItems key={index} meal={meal} index={index} />
+                    )
                 ) : (
-                    <TouchableOpacity
-                        style={styles.generateButton}
-                        onPress={() => router.push('/meal-plan-generate')}
-                    >
-                        <Text style={styles.generateText}>献立を生成する</Text>
-                    </TouchableOpacity>
+                    <View>
+                        <Text style={styles.noText}>献立が設定されていません。</Text>
+                        <TouchableOpacity
+                            style={styles.generateButton}
+                            onPress={() => router.push('/mealPlanGenerate')}
+                        >
+                            <Text style={styles.generateText}>献立を生成する</Text>
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
 
@@ -102,7 +124,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => router.push('/meal-plan-generate')}
+                    onPress={() => router.push('/mealPlanGenerate')}
                 >
                     <Text style={styles.actionIcon}>🤖</Text>
                     <Text style={styles.actionText}>AI献立生成</Text>
@@ -187,6 +209,21 @@ const styles = StyleSheet.create({
     mealType: {
         fontSize: 14,
         color: '#666',
+        marginBottom: 8,
+    },
+    mealCostContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginTop: 4
+    },
+    mealCostText: {
+        fontSize: 16,
+        fontWeight: 'bold'
+    },
+    mealCost: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 2
     },
     mealName: {
         fontSize: 16,
@@ -223,5 +260,16 @@ const styles = StyleSheet.create({
     actionText: {
         fontSize: 12,
         fontWeight: '600',
+    },
+    noText: {
+        fontSize: 16,
+        fontWeight: '300',
+        textAlign: 'center',
+        marginVertical: 8
+    },
+    viewDetail: {
+        fontSize: 14,
+        color: '#007AFF',
+        marginTop: 4,
     },
 });

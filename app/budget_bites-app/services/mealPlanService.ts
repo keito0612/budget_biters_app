@@ -1,6 +1,6 @@
 import { GeminiService } from "../lib/gemini";
 import { BudgetRepository } from "../repositories/budgetRepository";
-import { MealPlanRepository } from "../repositories/MealPlanRepository";
+import { MealPlanRepository } from "../repositories/mealPlanRepository";
 import { PreferencesRepository } from "../repositories/preferencesRepository";
 import { MealPlan } from "../types/types";
 

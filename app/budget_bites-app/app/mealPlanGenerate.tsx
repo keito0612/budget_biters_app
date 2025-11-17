@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { usePremium } from '../hooks/usePremium';
 import { LoginRequiredModal } from '../components/LoginRequiredModal';
 import { ServiceFactory } from '../factories/serviceFactory';
-
+import { LoadingOverlay } from '../components/LoadingOverlay';
+import { Ionicons } from '@expo/vector-icons';
 export default function MealPlanGenerateScreen() {
     const router = useRouter();
     const { isPremium } = usePremium();
@@ -29,35 +30,32 @@ export default function MealPlanGenerateScreen() {
         } catch (error: any) {
             Alert.alert('エラー', error.message);
         } finally {
-            setLoading(false);
+            setLoading(true);
         }
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>AI献立生成</Text>
-            </View>
+        <>
+            <ScrollView style={styles.container}>
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>📅 対象月</Text>
+                    <Text style={styles.value}>{currentMonth}</Text>
+                </View>
 
-            <View style={styles.card}>
-                <Text style={styles.cardTitle}>📅 対象月</Text>
-                <Text style={styles.value}>{currentMonth}</Text>
-            </View>
-
-            <TouchableOpacity
-                style={[styles.generateButton, loading && styles.buttonDisabled]}
-                onPress={handleGenerate}
-                disabled={loading}
-            >
-                {loading ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <Text style={styles.generateText}>🤖 献立を生成する</Text>
-                )}
-            </TouchableOpacity>
-
-            <LoginRequiredModal visible={showLoginModal} onClose={() => setShowLoginModal(false)} />
-        </ScrollView>
+                <TouchableOpacity
+                    style={[styles.generateButton, loading && styles.buttonDisabled]}
+                    onPress={handleGenerate}
+                    disabled={loading}
+                >
+                    <View style={styles.buttonContent}>
+                        <Ionicons name="sparkles-outline" size={20} color="white" />
+                        <Text style={styles.generateText}>献立を生成する</Text>
+                    </View>
+                </TouchableOpacity>
+                <LoginRequiredModal visible={showLoginModal} onClose={() => setShowLoginModal(false)} />
+            </ScrollView>
+            <LoadingOverlay visible={loading} message="献立を生成中" />
+        </>
     );
 }
 
@@ -104,5 +102,10 @@ const styles = StyleSheet.create({
     },
     buttonDisabled: {
         opacity: 0.5,
+    },
+    buttonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
 });

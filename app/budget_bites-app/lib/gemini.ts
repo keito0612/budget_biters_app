@@ -3,7 +3,7 @@
 import { Config } from '../constants/config';
 import { Budget, MealPlan, Preferences } from '../types/types';
 import { GoogleGenAI } from "@google/genai";
-
+import { GoogleGenerativeAI } from '@google/generative-ai';
 export interface GeminiMealPlanRequest {
   month: string;
   budget: Budget;
@@ -15,81 +15,153 @@ export interface GeminiResponse {
   plans: Omit<MealPlan, 'id' | 'created_at' | 'updated_at'>[];
 }
 
-// const ai = new GoogleGenAI({});
 
 export class GeminiService {
   private static apiKey = Config.gemini.apiKey;
-  private static endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent`;
+  private static url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=` + this.apiKey;
 
   static async generateMonthlyMealPlan(
     request: GeminiMealPlanRequest
   ): Promise<GeminiResponse> {
     const prompt = this.buildMonthlyPrompt(request);
-    const response = await fetch(`${this.endpoint}?key=${this.apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 8192,
-        },
-      }),
-    });
 
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
+    try {
+      const response = await fetch(this.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 32768,
+            responseMimeType: 'application/json', // JSON形式を強制
+          },
+        }),
+      });
+      // エラーチェック（最初の1回だけ）
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json();
+
+      const candidate = data.candidates[0];
+
+      if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+        console.error('content.parts が空:', JSON.stringify(candidate, null, 2));
+        throw new Error('Gemini APIのレスポンス形式が不正です');
+      }
+
+      const text = candidate.content.parts[0].text;
+      console.log('生成されたテキスト長:', text.length);
+      console.log('テキストの最初の部分:', text.substring(0, 200));
+
+      // responseMimeType: 'application/json' を指定しているので、
+      // 通常は直接JSONが返される
+      let result;
+      try {
+        // 直接JSONとしてパース
+        result = JSON.parse(text);
+      } catch (e) {
+        // パース失敗時は ```json ``` で囲まれている可能性
+        console.log('直接パース失敗。Markdown形式を試行');
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+
+        if (!jsonMatch) {
+          console.error('JSON抽出失敗。テキスト全体:', text);
+          throw new Error('JSONレスポンスの抽出に失敗しました');
+        }
+
+        const jsonText = jsonMatch[1] || jsonMatch[0];
+        console.log('抽出されたJSON:', jsonText.substring(0, 200));
+        result = JSON.parse(jsonText);
+      }
+
+      // 結果の検証
+      if (!result.plans || !Array.isArray(result.plans)) {
+        console.error('plans配列がありません:', result);
+        throw new Error('レスポンスにplans配列がありません');
+      }
+      console.log(result);
+      return result;
+
+    } catch (error) {
+      throw error;
     }
-
-    const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
-
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('JSONレスポンスの解析に失敗しました');
-    }
-
-    const result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-    return result;
   }
+
 
   static async regenerateDailyMeal(
     date: string,
     mealType: 'breakfast' | 'lunch' | 'dinner',
     request: GeminiMealPlanRequest
   ): Promise<Omit<MealPlan, 'id' | 'created_at' | 'updated_at'>> {
+    console.log('=== Gemini 日別献立生成 ===');
+    console.log(`日付: ${date}, 食事: ${mealType}`);
+
+    if (!this.apiKey) {
+      throw new Error('Gemini APIキーが設定されていません');
+    }
+
     const prompt = this.buildDailyPrompt(date, mealType, request);
 
-    const response = await fetch(`${this.endpoint}?key=${this.apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.8,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
-        },
-      }),
-    });
+    try {
+      const response = await fetch(this.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.8,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json();
+      const text = data.candidates[0].content.parts[0].text;
+
+      // 直接JSONパースを試行
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (e) {
+        // Markdown形式の場合
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('JSONレスポンスの解析に失敗しました');
+        }
+        result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+      }
+
+      console.log('日別献立生成成功');
+      return result;
+
+    } catch (error) {
+      console.error('日別献立生成エラー:', error);
+      throw error;
     }
-
-    const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
-
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('JSONレスポンスの解析に失敗しました');
-    }
-
-    const result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-    return result;
   }
 
   private static buildMonthlyPrompt(request: GeminiMealPlanRequest): string {

@@ -30,9 +30,6 @@ export default function CalendarScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>献立カレンダー</Text>
-            </View>
             <Calendar
                 markedDates={markedDates}
                 theme={{
