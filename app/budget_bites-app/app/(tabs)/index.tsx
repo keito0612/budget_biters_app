@@ -1,6 +1,6 @@
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { usePremium } from '../../hooks/usePremium';
 import { Budget, MealPlan } from '../../types/types';
 import { ServiceFactory } from '../../factories/serviceFactory';
@@ -13,9 +13,11 @@ export default function HomeScreen() {
     const [todayMeals, setTodayMeals] = useState<MealPlan[]>([]);
     const [budgetStatus, setBudgetStatus] = useState<any>(null);
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [])
+    );
 
     const loadData = async () => {
         const budgetService = ServiceFactory.createBudgetService();
@@ -31,7 +33,12 @@ export default function HomeScreen() {
         }
 
         const meals = await mealPlanService.getTodaysMeals();
-        setTodayMeals(meals);
+        //順番がおかしいのでソートする。
+        const sortedMeals = meals.sort((a: MealPlan, b: MealPlan) => {
+            const order = ["breakfast", "lunch", "dinner"];
+            return order.indexOf(a.meal_type) - order.indexOf(b.meal_type);
+        });
+        setTodayMeals(sortedMeals);
     };
 
     const MonthBudgetCard = ({ currentBudget }: { currentBudget: Budget | null }) => {
@@ -79,15 +86,6 @@ export default function HomeScreen() {
             {currentBudget ? (
                 <>
                     <MonthBudgetCard currentBudget={currentBudget} />
-                    {budgetStatus && (
-                        <View style={styles.card}>
-                            <Text style={styles.cardTitle}>使用状況</Text>
-                            <Text style={styles.spent}>使用済み: ¥{budgetStatus.spent.toLocaleString()}</Text>
-                            <Text style={styles.remaining}>
-                                残り: ¥{budgetStatus.remaining.toLocaleString()}
-                            </Text>
-                        </View>
-                    )}
                 </>
             ) : (
                 <TouchableOpacity
@@ -115,24 +113,6 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     </View>
                 )}
-            </View>
-
-            <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/calendar')}>
-                    <Text style={styles.actionIcon}>📅</Text>
-                    <Text style={styles.actionText}>カレンダー</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => router.push('/mealPlanGenerate')}
-                >
-                    <Text style={styles.actionIcon}>🤖</Text>
-                    <Text style={styles.actionText}>AI献立生成</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/expense')}>
-                    <Text style={styles.actionIcon}>💰</Text>
-                    <Text style={styles.actionText}>支出記録</Text>
-                </TouchableOpacity>
             </View>
         </ScrollView>
     );

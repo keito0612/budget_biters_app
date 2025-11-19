@@ -40,8 +40,8 @@ export class GeminiService {
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 32768,
-            responseMimeType: 'application/json', // JSON形式を強制
+            maxOutputTokens: 65536,
+            responseMimeType: 'application/json',
           },
         }),
       });
@@ -52,7 +52,7 @@ export class GeminiService {
       }
 
       const data = await response.json();
-
+      console.log(response.status);
       const candidate = data.candidates[0];
 
       if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
@@ -61,8 +61,6 @@ export class GeminiService {
       }
 
       const text = candidate.content.parts[0].text;
-      console.log('生成されたテキスト長:', text.length);
-      console.log('テキストの最初の部分:', text.substring(0, 200));
 
       // responseMimeType: 'application/json' を指定しているので、
       // 通常は直接JSONが返される
@@ -72,7 +70,6 @@ export class GeminiService {
         result = JSON.parse(text);
       } catch (e) {
         // パース失敗時は ```json ``` で囲まれている可能性
-        console.log('直接パース失敗。Markdown形式を試行');
         const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
 
         if (!jsonMatch) {
@@ -81,7 +78,6 @@ export class GeminiService {
         }
 
         const jsonText = jsonMatch[1] || jsonMatch[0];
-        console.log('抽出されたJSON:', jsonText.substring(0, 200));
         result = JSON.parse(jsonText);
       }
 
@@ -90,7 +86,6 @@ export class GeminiService {
         console.error('plans配列がありません:', result);
         throw new Error('レスポンスにplans配列がありません');
       }
-      console.log(result);
       return result;
 
     } catch (error) {
@@ -104,9 +99,6 @@ export class GeminiService {
     mealType: 'breakfast' | 'lunch' | 'dinner',
     request: GeminiMealPlanRequest
   ): Promise<Omit<MealPlan, 'id' | 'created_at' | 'updated_at'>> {
-    console.log('=== Gemini 日別献立生成 ===');
-    console.log(`日付: ${date}, 食事: ${mealType}`);
-
     if (!this.apiKey) {
       throw new Error('Gemini APIキーが設定されていません');
     }
@@ -182,6 +174,7 @@ export class GeminiService {
 - アレルギー: ${preferences.allergies.length > 0 ? preferences.allergies.join(', ') : 'なし'}
 - 避けたい食材: ${preferences.avoid_ingredients.length > 0 ? preferences.avoid_ingredients.join(', ') : 'なし'}
 - 日数: ${daysInMonth}日分
+- 手順：手順は、細かく具体的に、お願いします。（例：鍋に野菜を入れて、3分茹でる）
 
 【出力形式】
 以下のJSON形式で、${daysInMonth}日分 × 3食（朝・昼・晩）の献立を返してください。
@@ -224,6 +217,7 @@ export class GeminiService {
 - 味付け: ${preferences.taste_preference === 'light' ? 'あっさり' : preferences.taste_preference === 'balanced' ? 'バランス' : '濃いめ'}
 - アレルギー: ${preferences.allergies.length > 0 ? preferences.allergies.join(', ') : 'なし'}
 - 避けたい食材: ${preferences.avoid_ingredients.length > 0 ? preferences.avoid_ingredients.join(', ') : 'なし'}
+- 手順：　手順は、細かく具体的に、お願いします。（例：鍋に野菜を入れて、3分茹でる）
 
 【出力形式】
 以下のJSON形式で返してください。

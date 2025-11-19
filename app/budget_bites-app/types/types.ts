@@ -93,3 +93,5 @@ export interface BackupData {
     premium_status: PremiumStatus;
     auth: AuthState;
 }
+
+export type AlertType = 'success' | 'warning' | 'error';

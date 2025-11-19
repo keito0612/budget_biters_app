@@ -64,7 +64,6 @@ export default function MealDetailScreen() {
                 actual_cost: cost,
                 notes,
             });
-
             Alert.alert('成功', '実行ログを記録しました', [
                 { text: 'OK', onPress: () => router.back() },
             ]);
@@ -325,10 +324,14 @@ const styles = StyleSheet.create({
     },
     metaInfo: {
         flexDirection: 'row',
-        gap: 4,
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
+        columnGap: 24
     },
     metaItem: {
-        flex: 1,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     metaLabel: {
         fontSize: 12,
@@ -384,10 +387,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: 12,
-        marginTop: 12,
-        borderTopWidth: 2,
-        borderTopColor: '#007AFF',
+        paddingTop: 4,
+        marginTop: 4,
     },
     totalCostLabel: {
         fontSize: 16,
@@ -513,64 +514,3 @@ const styles = StyleSheet.create({
         marginTop: 40,
     },
 });
-
-// ============================================================
-// app/(tabs)/index.tsx の修正部分
-// ============================================================
-
-/*
-今日の献立セクションを以下のように変更：
-
-<View style={styles.card}>
-  <Text style={styles.cardTitle}>今日の献立</Text>
-  {todayMeals.length > 0 ? (
-    todayMeals.map((meal, index) => (
-      <TouchableOpacity
-        key={index}
-        style={styles.mealItem}
-        onPress={() => router.push({
-          pathname: '/meal-detail',
-          params: {
-            date: meal.date,
-            mealType: meal.meal_type,
-          },
-        })}
-      >
-        <Text style={styles.mealType}>
-          {meal.meal_type === 'breakfast'
-            ? '🌅 朝食'
-            : meal.meal_type === 'lunch'
-            ? '☀️ 昼食'
-            : '🌙 夕食'}
-        </Text>
-        <Text style={styles.mealName}>{meal.menu_name}</Text>
-        <Text style={styles.mealCost}>¥{meal.estimated_cost}</Text>
-        <Text style={styles.viewDetail}>詳細を見る →</Text>
-      </TouchableOpacity>
-    ))
-  ) : (
-    <TouchableOpacity
-      style={styles.generateButton}
-      onPress={() => router.push('/meal-plan-generate')}
-    >
-      <Text style={styles.generateText}>献立を生成する</Text>
-    </TouchableOpacity>
-  )}
-</View>
-
-// スタイルに追加：
-mealItem: {
-  paddingVertical: 12,
-  borderBottomWidth: 1,
-  borderBottomColor: '#eee',
-},
-viewDetail: {
-  fontSize: 14,
-  color: '#007AFF',
-  marginTop: 4,
-},
-*/
-
-// ============================================================
-// 完了！
-// ============================================================

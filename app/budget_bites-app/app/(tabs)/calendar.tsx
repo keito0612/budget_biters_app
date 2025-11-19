@@ -1,15 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { ServiceFactory } from '../../factories/serviceFactory';
+import { MealPlan } from '../../types/types';
+import { router, useFocusEffect } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 
+// 日本語ロケール設定
+LocaleConfig.locales['ja'] = {
+    monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+    monthNamesShort: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+    dayNames: ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'],
+    dayNamesShort: ['日', '月', '火', '水', '木', '金', '土'],
+    today: '今日'
+};
+LocaleConfig.defaultLocale = 'ja';
+
+// 祝日データのキャッシュ（Holidays JP APIから取得）
+let holidaysCache: { [key: string]: string } = {};
+
+
+interface DayMeals {
+    breakfast?: MealPlan;
+    lunch?: MealPlan;
+    dinner?: MealPlan;
+}
 
 export default function CalendarScreen() {
-    const [markedDates, setMarkedDates] = useState({});
+    const [markedDates, setMarkedDates] = useState<any>({});
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [selectedDayMeals, setSelectedDayMeals] = useState<DayMeals | null>(null);
+    const [allPlans, setAllPlans] = useState<MealPlan[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
 
     useEffect(() => {
-        loadMonthData();
-    }, []);
+        if (allPlans.length > 0) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            selectDate(todayStr);
+        }
+    }, [allPlans]);
+
+    useFocusEffect(
+        useCallback(() => {
+            (async () => {
+                setIsLoading(true);
+                await loadHolidays();
+                await loadMonthData();
+                setIsLoading(false);
+            })();
+        }, [])
+    );
+
+    // 祝日データをAPIから取得（Holidays JP API使用）
+    const loadHolidays = async () => {
+        if (Object.keys(holidaysCache).length > 0) {
+            return;
+        }
+
+        try {
+            const response = await fetch('https://holidays-jp.github.io/api/v1/date.json');
+            const data = await response.json();
+
+            // 振替休日を追加（APIに含まれていない場合のため）
+            // 日曜の祝日の翌日（月曜）を振替休日として追加
+            const addedHolidays = { ...data };
+            Object.keys(data).forEach(dateStr => {
+                const date = new Date(dateStr);
+                if (date.getDay() === 0) { // 日曜日の場合
+                    const nextDay = new Date(date);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    const nextDayStr = nextDay.toISOString().split('T')[0];
+
+                    // 翌日が既に祝日でない場合のみ振替休日を追加
+                    if (!addedHolidays[nextDayStr]) {
+                        addedHolidays[nextDayStr] = '振替休日';
+                    }
+                }
+            });
+
+            holidaysCache = addedHolidays;
+        } catch (error) {
+            Alert.alert('エラー', 'データの取得に失敗しました。　\n 通信状況をご確認のうえ、再度お試しください。');
+            holidaysCache = {};
+        }
+    };
 
     const loadMonthData = async () => {
         const today = new Date();
@@ -18,41 +93,394 @@ export default function CalendarScreen() {
         const mealPlanRepo = ServiceFactory.getMealPlanRepository();
         const plans = await mealPlanRepo.findByDateRange(`${month}-01`, `${month}-31`);
 
+        setAllPlans(plans);
+
         const marked: any = {};
-        plans.forEach((plan: any) => {
-            if (!marked[plan.date]) {
-                marked[plan.date] = { marked: true, dotColor: '#007AFF' };
-            }
+        const datesWithMeals = new Set<string>();
+
+        plans.forEach((plan: MealPlan) => {
+            datesWithMeals.add(plan.date);
         });
 
+        // 献立がある日をマーク
+        datesWithMeals.forEach((date) => {
+            const dayOfWeek = new Date(date).getDay();
+            const isHoliday = holidaysCache[date];
+
+            marked[date] = {
+                marked: true,
+                dotColor: '#007AFF',
+                customStyles: {
+                    text: {
+                        color: isHoliday || dayOfWeek === 0 ? '#ff0000' : (dayOfWeek === 6 ? '#0000ff' : '#000000'),
+                        fontWeight: isHoliday ? 'bold' : 'normal',
+                    },
+                    container: {
+                        backgroundColor: 'transparent',
+                    }
+                }
+            };
+        });
+
+        // 献立がない日も祝日・土日の色付け
+        const startDate = new Date(`${month}-01`);
+        const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            if (!marked[dateStr]) {
+                const dayOfWeek = d.getDay();
+                const isHoliday = holidaysCache[dateStr];
+
+                marked[dateStr] = {
+                    customStyles: {
+                        text: {
+                            color: isHoliday || dayOfWeek === 0 ? '#ff0000' : (dayOfWeek === 6 ? '#0000ff' : '#000000'),
+                            fontWeight: isHoliday ? 'bold' : 'normal',
+                        },
+                        container: {
+                            backgroundColor: 'transparent',
+                        }
+                    }
+                };
+            }
+        }
+
         setMarkedDates(marked);
+
+        // 初期選択日を今日に設定
+        const todayStr = today.toISOString().split('T')[0];
+        selectDate(todayStr);
+    };
+
+    const selectDate = (dateStr: string) => {
+        const dayMeals: DayMeals = {
+            breakfast: allPlans.find(p => p.date === dateStr && p.meal_type === 'breakfast'),
+            lunch: allPlans.find(p => p.date === dateStr && p.meal_type === 'lunch'),
+            dinner: allPlans.find(p => p.date === dateStr && p.meal_type === 'dinner'),
+        };
+
+        setSelectedDate(dateStr);
+        setSelectedDayMeals(dayMeals);
+    };
+
+    const onDayPress = (day: any) => {
+        selectDate(day.dateString);
+    };
+
+    const getTotalCalories = (dayMeals: DayMeals | null) => {
+        if (!dayMeals) return 0;
+        const breakfast = dayMeals.breakfast?.nutrition.calories || 0;
+        const lunch = dayMeals.lunch?.nutrition.calories || 0;
+        const dinner = dayMeals.dinner?.nutrition.calories || 0;
+        return breakfast + lunch + dinner;
+    };
+
+    const hasMeals = (dayMeals: DayMeals | null) => {
+        if (!dayMeals) return false;
+        return !!(dayMeals.breakfast || dayMeals.lunch || dayMeals.dinner);
+    };
+
+    const handleEdit = () => {
+        alert(`${selectedDate}の献立を編集します`);
+    };
+
+    const formatDate = (dateStr: string | null) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+        const holiday = holidaysCache[dateStr];
+
+        return `${year}年${month}月${day}日（${dayOfWeek}）${holiday ? ` ${holiday}` : ''}`;
+    };
+
+    const DateHeader = ({ selectedDate }: { selectedDate: string }) => {
+        return (
+            <View style={styles.dateHeader}>
+                <Text style={[
+                    styles.dateTitle,
+                    holidaysCache[selectedDate] && styles.holidayText
+                ]}>
+                    {formatDate(selectedDate)}
+                </Text>
+            </View>
+        );
+    };
+
+    const MealItem = ({
+        selectedDayMeals,
+        mealType,
+    }: {
+        selectedDayMeals: DayMeals | null;
+        mealType: 'breakfast' | 'lunch' | 'dinner';
+    }) => {
+        const meal = selectedDayMeals?.[mealType];
+        return (
+            <View style={styles.mealSection}>
+                <View>
+                    <Text style={styles.mealLabel}>
+                        {mealType === 'breakfast'
+                            ? '🌅 朝食'
+                            : mealType === 'lunch'
+                                ? '☀️ 昼食'
+                                : '🌙 夕食'}
+                    </Text>
+
+                    {meal ? (
+                        <View style={styles.mealContent}>
+                            <Text style={styles.mealName}>{meal.menu_name}</Text>
+                            <View style={styles.mealInfo}>
+                                <Text style={styles.calories}>{meal.nutrition.calories} kcal</Text>
+                                <Text style={styles.cookingTime}>⏱️ {meal.cooking_time}分</Text>
+                            </View>
+                            <Text style={styles.estimatedCost}>¥{meal.estimated_cost}</Text>
+                        </View>
+                    ) : (
+                        <Text style={styles.noMeal}>未設定</Text>
+                    )}
+                </View>
+                {meal &&
+                    <MealDetailButton meal={meal} />
+                }
+            </View>
+        );
+    };
+
+    const MealDetailButton = ({ meal }: { meal: MealPlan }) => {
+        return (
+            <TouchableOpacity
+                style={styles.detailButton}
+                onPress={() => {
+                    router.push({
+                        pathname: '/mealDetail',
+                        params: {
+                            date: meal.date,
+                            mealType: meal.meal_type,
+                        },
+                    })
+                }}
+            >
+                <Text style={styles.detailButtonText}>詳細</Text>
+            </TouchableOpacity>
+        );
+    };
+    const MealList = () => {
+        return (
+            <ScrollView style={styles.mealList}>
+                {selectedDate && (
+                    <>
+                        {hasMeals(selectedDayMeals) ? (
+                            <>
+                                <MealItem selectedDayMeals={selectedDayMeals} mealType={'breakfast'} />
+                                <MealItem selectedDayMeals={selectedDayMeals} mealType={'lunch'} />
+                                <MealItem selectedDayMeals={selectedDayMeals} mealType={'dinner'} />
+                                <View style={styles.totalSection}>
+                                    <Text style={styles.totalLabel}>合計カロリー</Text>
+                                    <Text style={styles.totalCalories}>{getTotalCalories(selectedDayMeals)} kcal</Text>
+                                </View>
+                            </>
+                        ) : (
+                            <View style={styles.noPlanContainer}>
+                                <Text style={styles.noPlanText}>この日の献立はまだ登録されていません</Text>
+                            </View>
+                        )}
+                    </>
+                )}
+            </ScrollView>
+        );
+    };
+
+    const MealEditButton = () => {
+        return (
+            <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+                <Text style={styles.editButtonText}>
+                    {hasMeals(selectedDayMeals) ? '📝 献立を編集' : '➕ 献立を追加'}
+                </Text>
+            </TouchableOpacity>
+        );
     };
 
     return (
-        <View style={styles.container}>
-            <Calendar
-                markedDates={markedDates}
-                theme={{
-                    todayTextColor: '#007AFF',
-                    selectedDayBackgroundColor: '#007AFF',
-                }}
-            />
-        </View>
+        <>
+            <View style={styles.container}>
+                <Calendar
+                    markedDates={{
+                        ...markedDates,
+                        [selectedDate || '']: {
+                            ...markedDates[selectedDate || ''],
+                            selected: true,
+                            selectedColor: '#007AFF',
+                        }
+                    }}
+                    onDayPress={onDayPress}
+                    markingType={'custom'}
+                    renderHeader={(date) => {
+                        const month = date.getMonth() + 1;
+                        const year = date.getFullYear();
+                        return (
+                            <View style={styles.calendarHeader}>
+                                <Text style={styles.calendarHeaderText}>{year}年{month}月</Text>
+                            </View>
+                        );
+                    }}
+                    theme={{
+                        todayTextColor: '#007AFF',
+                        selectedDayBackgroundColor: '#007AFF',
+                        arrowColor: '#007AFF',
+                        textDayFontFamily: 'System',
+                        textMonthFontFamily: 'System',
+                        textDayHeaderFontFamily: 'System',
+                        textMonthFontWeight: 'bold',
+                        textDayFontSize: 16,
+                        textMonthFontSize: 18,
+                    }}
+                />
+                <View style={styles.mealDetailContainer}>
+                    {selectedDate && (
+                        <DateHeader selectedDate={selectedDate} />
+                    )}
+                    <MealList />
+                    <MealEditButton />
+                </View>
+            </View>
+            <LoadingOverlay visible={isLoading} />
+        </>
     );
-}
+};
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
-    header: {
-        padding: 20,
-        paddingTop: 60,
-        backgroundColor: 'white',
+    calendarHeader: {
+        paddingVertical: 10,
+        alignItems: 'center',
     },
-    title: {
-        fontSize: 24,
+    calendarHeaderText: {
+        fontSize: 18,
         fontWeight: 'bold',
+        color: '#333',
+    },
+    mealDetailContainer: {
+        flex: 1,
+        backgroundColor: 'white',
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
+    },
+    dateHeader: {
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+        backgroundColor: '#fafafa',
+    },
+    dateTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    holidayText: {
+        color: '#ff0000',
+    },
+    mealList: {
+        flex: 1,
+    },
+    mealSection: {
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        flexDirection: 'row',
+        justifyContent: 'space-between'
+    },
+    mealLabel: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        color: '#333',
+    },
+    mealContent: {
+        marginLeft: 10,
+    },
+    mealName: {
+        fontSize: 15,
+        color: '#333',
+        marginBottom: 4,
+    },
+    mealInfo: {
+        flexDirection: 'row',
+        gap: 15,
+    },
+    calories: {
+        fontSize: 14,
+        color: '#666',
+    },
+    cookingTime: {
+        fontSize: 14,
+        color: '#888',
+    },
+    estimatedCost: {
+        fontSize: 14,
+        color: '#888',
+        paddingTop: 4
+    },
+    noMeal: {
+        fontSize: 14,
+        color: '#999',
+        fontStyle: 'italic',
+        marginLeft: 10,
+    },
+    totalSection: {
+        backgroundColor: '#007AFF',
+        padding: 15,
+        margin: 15,
+        borderRadius: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    totalLabel: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: 'white',
+    },
+    totalCalories: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: 'white',
+    },
+    noPlanContainer: {
+        padding: 40,
+        alignItems: 'center',
+    },
+    noPlanText: {
+        fontSize: 15,
+        color: '#999',
+        textAlign: 'center',
+    },
+    editButton: {
+        backgroundColor: '#007AFF',
+        margin: 15,
+        padding: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    editButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    detailButtonText: {
+        fontSize: 16,
+        color: '#007AFF',
+        fontWeight: 'bold'
+    },
+    detailButton: {
+        padding: 6,
+        borderRadius: 6,
+        alignSelf: 'center',
+        marginLeft: 10,
     },
 });
