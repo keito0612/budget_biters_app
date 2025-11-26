@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { usePremium } from '../hooks/usePremium';
 import { LoginRequiredModal } from '../components/LoginRequiredModal';
 import { ServiceFactory } from '../factories/serviceFactory';
@@ -13,10 +13,11 @@ export default function MealPlanGenerateScreen() {
     const [currentMonth, setCurrentMonth] = useState('');
     const [showLoginModal, setShowLoginModal] = useState(false);
 
-    useEffect(() => {
+    useFocusEffect(() => {
         const today = new Date();
         setCurrentMonth(today.toISOString().substring(0, 7));
-    }, []);
+    });
+
 
     const handleGenerate = async () => {
         setLoading(true);
@@ -25,12 +26,12 @@ export default function MealPlanGenerateScreen() {
             await mealPlanService.generateMonthlyPlan(currentMonth);
 
             Alert.alert('成功', '献立を生成しました！', [
-                { text: 'OK', onPress: () => router.push('/calendar') },
+                { text: 'OK', onPress: () => router.back() },
             ]);
         } catch (error: any) {
             Alert.alert('エラー', error.message);
         } finally {
-            setLoading(true);
+            setLoading(false);
         }
     };
 

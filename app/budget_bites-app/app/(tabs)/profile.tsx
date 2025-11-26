@@ -45,10 +45,6 @@ export default function ProfileScreen() {
     return (
         <>
             <ScrollView style={styles.container}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>プロフィール</Text>
-                    {isPremium && <PremiumBadge />}
-                </View>
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>アカウント</Text>

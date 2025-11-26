@@ -27,13 +27,6 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="expense"
-                options={{
-                    title: '支出',
-                    tabBarIcon: (props) => <Ionicons name="cash-outline" size={20} color={props.color} />,
-                }}
-            />
-            <Tabs.Screen
                 name="profile"
                 options={{
                     title: 'プロフィール',

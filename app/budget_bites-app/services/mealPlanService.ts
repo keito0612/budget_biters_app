@@ -26,6 +26,21 @@ export class MealPlanService {
         await this.mealPlanRepo.bulkSave(response.plans);
     }
 
+    async regenerateTodayMeal(
+        date: string,
+    ): Promise<void> {
+        const month = date.substring(0, 7);
+        const budget = await this.budgetRepo.findByMonth(month);
+        if (!budget) throw new Error('予算が設定されていません');
+        const preferences = await this.preferencesRepo.get();
+        const response = await GeminiService.regenerateTodayMeal(date, {
+            month,
+            budget,
+            preferences,
+        });
+        await this.mealPlanRepo.bulkSave(response.plans);
+    }
+
     async regenerateDailyMeal(
         date: string,
         mealType: 'breakfast' | 'lunch' | 'dinner'

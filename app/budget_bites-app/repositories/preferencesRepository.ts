@@ -14,7 +14,6 @@ export class PreferencesRepositoryImpl implements PreferencesRepository {
             'SELECT * FROM preferences WHERE id = 1'
         );
         const row = rows[0];
-
         return {
             ...row,
             allergies: JSON.parse(row.allergies),
@@ -30,11 +29,11 @@ export class PreferencesRepositoryImpl implements PreferencesRepository {
             updates.push('taste_preference = ?');
             values.push(preferences.taste_preference);
         }
-        if (preferences.allergies !== undefined) {
+        if (preferences.allergies!.length !== 0) {
             updates.push('allergies = ?');
             values.push(JSON.stringify(preferences.allergies));
         }
-        if (preferences.avoid_ingredients !== undefined) {
+        if (preferences.avoid_ingredients!.length !== 0) {
             updates.push('avoid_ingredients = ?');
             values.push(JSON.stringify(preferences.avoid_ingredients));
         }

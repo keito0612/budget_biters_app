@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { usePremium } from '../../hooks/usePremium';
 import { Budget, MealPlan } from '../../types/types';
 import { ServiceFactory } from '../../factories/serviceFactory';
-import { PremiumBadge } from '../../components/PremiumBadge';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -44,14 +44,21 @@ export default function HomeScreen() {
     const MonthBudgetCard = ({ currentBudget }: { currentBudget: Budget | null }) => {
         return (
             <View style={styles.card}>
-                <Text style={styles.cardTitle}>今月の予算</Text>
+                <View style={styles.cardTitleContainer}>
+                    <Text style={styles.cardTitle}>今月の予算</Text>
+                    <TouchableOpacity onPress={() => {
+                        router.push('/budgetEdit');
+                    }}>
+                        <MaterialCommunityIcons name="pencil-circle-outline" size={24} color='#007AFF' />
+                    </TouchableOpacity>
+                </View>
                 <Text style={styles.amount}>
                     ¥{currentBudget?.total_budget.toLocaleString()}
                 </Text>
                 <Text style={styles.daily}>
                     1日あたり: ¥{currentBudget?.daily_budget.toLocaleString()}
                 </Text>
-            </View>
+            </View >
         );
     };
 
@@ -81,6 +88,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
         );
     }
+
     return (
         <ScrollView style={styles.container}>
             {currentBudget ? (
@@ -146,10 +154,14 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
+    cardTitleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
     cardTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 12,
+        fontWeight: 'bold'
     },
     amount: {
         fontSize: 32,

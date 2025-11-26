@@ -129,7 +129,6 @@ export default function PreferenceSetupScreen() {
                 const found = COMMON_AVOID_INGREDIENTS.find((a) => a.id === id);
                 return found ? found.label : id;
             });
-
             await preferencesRepo.update({
                 taste_preference: tastePreference,
                 allergies: allergyLabels,
@@ -146,14 +145,6 @@ export default function PreferenceSetupScreen() {
 
     return (
         <ScrollView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>初期設定</Text>
-                <Text style={styles.subtitle}>
-                    あなたの食生活に合わせて献立を生成します
-                </Text>
-            </View>
-
-            {/* 予算設定 */}
             <View style={styles.card}>
                 <Text style={styles.label}>💰 月間食費予算</Text>
                 <Text style={styles.description}>

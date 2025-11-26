@@ -26,6 +26,7 @@ export class MealPlanRepositoryImpl implements MealPlanRepository {
         return this.findByDateRange(date, date);
     }
 
+
     async findByDateAndMealType(
         date: string,
         mealType: 'breakfast' | 'lunch' | 'dinner'
@@ -39,10 +40,23 @@ export class MealPlanRepositoryImpl implements MealPlanRepository {
     }
 
     async save(plan: Omit<MealPlan, 'id' | 'created_at' | 'updated_at'>): Promise<void> {
+        const sql = `
+                INSERT INTO meal_plans 
+                    (date, meal_type, menu_name, ingredients, recipe, nutrition, cooking_time, estimated_cost, created_at, updated_at)
+                VALUES 
+                    (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                ON CONFLICT (date, meal_type) 
+                DO UPDATE SET
+                    menu_name = EXCLUDED.menu_name,
+                    ingredients = EXCLUDED.ingredients,
+                    recipe = EXCLUDED.recipe,
+                    nutrition = EXCLUDED.nutrition,
+                    cooking_time = EXCLUDED.cooking_time,
+                    estimated_cost = EXCLUDED.estimated_cost,
+                    updated_at = datetime('now')
+            `;
         await dbConnection.execute(
-            `INSERT OR REPLACE INTO meal_plans 
-       (date, meal_type, menu_name, ingredients, recipe, nutrition, cooking_time, estimated_cost, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            sql,
             [
                 plan.date,
                 plan.meal_type,
@@ -84,4 +98,5 @@ export class MealPlanRepositoryImpl implements MealPlanRepository {
             nutrition: JSON.parse(row.nutrition),
         };
     }
+
 }

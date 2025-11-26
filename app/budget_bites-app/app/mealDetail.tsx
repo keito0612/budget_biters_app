@@ -13,7 +13,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { usePremium } from '../hooks/usePremium';
 import { ServiceFactory } from '../factories/serviceFactory';
-import { MealPlan } from '../types/types';
+import { MealLog, MealPlan } from '../types/types';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Ionicons } from '@expo/vector-icons';
+import { LoadingOverlay } from '../components/LoadingOverlay';
 
 export default function MealDetailScreen() {
     const router = useRouter();
@@ -25,6 +28,9 @@ export default function MealDetailScreen() {
     const [actualCost, setActualCost] = useState('');
     const [notes, setNotes] = useState('');
     const [regenerating, setRegenerating] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [mealLog, setMealLog] = useState<MealLog | null>(null);
+    const mealLogRepo = ServiceFactory.getMealLogRepository();
 
     useEffect(() => {
         loadMealDetail();
@@ -37,9 +43,14 @@ export default function MealDetailScreen() {
                 params.date as string,
                 params.mealType as 'breakfast' | 'lunch' | 'dinner'
             );
+            const mealLogData = await mealLogRepo.findByMonth(params.date as string, params.mealType as 'breakfast' | 'lunch' | 'dinner');
+            if (mealLogData[0] !== undefined) {
+                setActualCost(mealLogData[0].actual_cost.toString());
+                setNotes(mealLogData[0].notes!);
+            }
             setMeal(mealData);
         } catch (error) {
-            console.error('献立取得エラー:', error);
+            console.log(error);
             Alert.alert('エラー', '献立の取得に失敗しました');
         } finally {
             setLoading(false);
@@ -56,7 +67,6 @@ export default function MealDetailScreen() {
         }
 
         try {
-            const mealLogRepo = ServiceFactory.getMealLogRepository();
             await mealLogRepo.save({
                 date: meal.date,
                 meal_type: meal.meal_type,
@@ -65,7 +75,7 @@ export default function MealDetailScreen() {
                 notes,
             });
             Alert.alert('成功', '実行ログを記録しました', [
-                { text: 'OK', onPress: () => router.back() },
+                { text: 'OK', onPress: () => { } },
             ]);
         } catch (error: any) {
             Alert.alert('エラー', error.message);
@@ -73,10 +83,10 @@ export default function MealDetailScreen() {
     };
 
     const handleRegenerate = async () => {
-        if (!isPremium) {
-            Alert.alert('Premium限定', 'AI再提案はPremium会員限定機能です');
-            return;
-        }
+        // if (!isPremium) {
+        //     Alert.alert('Premium限定', 'AI再提案はPremium会員限定機能です');
+        //     return;
+        // }
 
         if (!meal) return;
 
@@ -88,7 +98,7 @@ export default function MealDetailScreen() {
                 {
                     text: '再生成',
                     onPress: async () => {
-                        setRegenerating(true);
+                        setIsLoading(true);
                         try {
                             const mealPlanService = ServiceFactory.createMealPlanService();
                             await mealPlanService.regenerateDailyMeal(meal.date, meal.meal_type);
@@ -98,7 +108,7 @@ export default function MealDetailScreen() {
                         } catch (error: any) {
                             Alert.alert('エラー', error.message);
                         } finally {
-                            setRegenerating(false);
+                            setIsLoading(false);
                         }
                     },
                 },
@@ -131,146 +141,146 @@ export default function MealDetailScreen() {
         meal.meal_type === 'breakfast' ? '🌅 朝食' : meal.meal_type === 'lunch' ? '☀️ 昼食' : '🌙 夕食';
 
     return (
-        <ScrollView style={styles.container}>
-            {/* メイン情報 */}
-            <View style={styles.mainInfo}>
-                <Text style={styles.mealType}>{mealTypeJa}</Text>
-                <Text style={styles.menuName}>{meal.menu_name}</Text>
+        <>
+            <KeyboardAwareScrollView style={styles.container}>
+                {/* メイン情報 */}
+                <View style={styles.mainInfo}>
+                    <Text style={styles.mealType}>{mealTypeJa}</Text>
+                    <Text style={styles.menuName}>{meal.menu_name}</Text>
 
-                <View style={styles.metaInfo}>
-                    <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>推定費用</Text>
-                        <Text style={styles.metaValue}>¥{meal.estimated_cost.toLocaleString()}</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>調理時間</Text>
-                        <Text style={styles.metaValue}>{meal.cooking_time}分</Text>
+                    <View style={styles.metaInfo}>
+                        <View style={styles.metaItem}>
+                            <Text style={styles.metaLabel}>推定費用</Text>
+                            <Text style={styles.metaValue}>¥{meal.estimated_cost.toLocaleString()}</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <Text style={styles.metaLabel}>調理時間</Text>
+                            <Text style={styles.metaValue}>{meal.cooking_time}分</Text>
+                        </View>
                     </View>
                 </View>
-            </View>
 
-            {/* 材料 */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>🛒 材料</Text>
-                <View style={styles.ingredientsContainer}>
-                    {meal.ingredients.map((ingredient, index) => (
-                        <View key={index} style={styles.ingredientItem}>
-                            <View style={styles.ingredientMain}>
-                                <Text style={styles.ingredientName}>{ingredient.name}</Text>
-                                <Text style={styles.ingredientAmount}>{ingredient.amount}</Text>
+                {/* 材料 */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>🛒 材料</Text>
+                    <View style={styles.ingredientsContainer}>
+                        {meal.ingredients.map((ingredient, index) => (
+                            <View key={index} style={styles.ingredientItem}>
+                                <View style={styles.ingredientMain}>
+                                    <Text style={styles.ingredientName}>{ingredient.name}</Text>
+                                    <Text style={styles.ingredientAmount}>{ingredient.amount}</Text>
+                                </View>
+                                <Text style={styles.ingredientCost}>¥{ingredient.cost}</Text>
                             </View>
-                            <Text style={styles.ingredientCost}>¥{ingredient.cost}</Text>
+                        ))}
+                    </View>
+                    <View style={styles.totalCost}>
+                        <Text style={styles.totalCostLabel}>材料費合計</Text>
+                        <Text style={styles.totalCostValue}>
+                            ¥
+                            {meal.ingredients
+                                .reduce((sum, ing) => sum + ing.cost, 0)
+                                .toLocaleString()}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* 作り方 */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>👨‍🍳 作り方</Text>
+                    {meal.recipe.map((step, index) => (
+                        <View key={index} style={styles.recipeStep}>
+                            <View style={styles.stepNumber}>
+                                <Text style={styles.stepNumberText}>{index + 1}</Text>
+                            </View>
+                            <Text style={styles.stepText}>{step}</Text>
                         </View>
                     ))}
                 </View>
-                <View style={styles.totalCost}>
-                    <Text style={styles.totalCostLabel}>材料費合計</Text>
-                    <Text style={styles.totalCostValue}>
-                        ¥
-                        {meal.ingredients
-                            .reduce((sum, ing) => sum + ing.cost, 0)
-                            .toLocaleString()}
-                    </Text>
-                </View>
-            </View>
 
-            {/* 作り方 */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>👨‍🍳 作り方</Text>
-                {meal.recipe.map((step, index) => (
-                    <View key={index} style={styles.recipeStep}>
-                        <View style={styles.stepNumber}>
-                            <Text style={styles.stepNumberText}>{index + 1}</Text>
+                {/* 栄養情報 */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>📊 栄養情報</Text>
+                    <View style={styles.nutritionGrid}>
+                        <View style={styles.nutritionItem}>
+                            <Text style={styles.nutritionValue}>{meal.nutrition.calories}</Text>
+                            <Text style={styles.nutritionLabel}>カロリー</Text>
+                            <Text style={styles.nutritionUnit}>kcal</Text>
                         </View>
-                        <Text style={styles.stepText}>{step}</Text>
-                    </View>
-                ))}
-            </View>
-
-            {/* 栄養情報 */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📊 栄養情報</Text>
-                <View style={styles.nutritionGrid}>
-                    <View style={styles.nutritionItem}>
-                        <Text style={styles.nutritionValue}>{meal.nutrition.calories}</Text>
-                        <Text style={styles.nutritionLabel}>カロリー</Text>
-                        <Text style={styles.nutritionUnit}>kcal</Text>
-                    </View>
-                    <View style={styles.nutritionItem}>
-                        <Text style={styles.nutritionValue}>{meal.nutrition.protein}</Text>
-                        <Text style={styles.nutritionLabel}>タンパク質</Text>
-                        <Text style={styles.nutritionUnit}>g</Text>
-                    </View>
-                    <View style={styles.nutritionItem}>
-                        <Text style={styles.nutritionValue}>{meal.nutrition.fat}</Text>
-                        <Text style={styles.nutritionLabel}>脂質</Text>
-                        <Text style={styles.nutritionUnit}>g</Text>
-                    </View>
-                    <View style={styles.nutritionItem}>
-                        <Text style={styles.nutritionValue}>{meal.nutrition.carbs}</Text>
-                        <Text style={styles.nutritionLabel}>炭水化物</Text>
-                        <Text style={styles.nutritionUnit}>g</Text>
+                        <View style={styles.nutritionItem}>
+                            <Text style={styles.nutritionValue}>{meal.nutrition.protein}</Text>
+                            <Text style={styles.nutritionLabel}>タンパク質</Text>
+                            <Text style={styles.nutritionUnit}>g</Text>
+                        </View>
+                        <View style={styles.nutritionItem}>
+                            <Text style={styles.nutritionValue}>{meal.nutrition.fat}</Text>
+                            <Text style={styles.nutritionLabel}>脂質</Text>
+                            <Text style={styles.nutritionUnit}>g</Text>
+                        </View>
+                        <View style={styles.nutritionItem}>
+                            <Text style={styles.nutritionValue}>{meal.nutrition.carbs}</Text>
+                            <Text style={styles.nutritionLabel}>炭水化物</Text>
+                            <Text style={styles.nutritionUnit}>g</Text>
+                        </View>
                     </View>
                 </View>
-            </View>
 
-            {/* 実行ログ記録 */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>✅ 実行ログを記録</Text>
-                <View style={styles.logForm}>
-                    <Text style={styles.inputLabel}>実際にかかった費用</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="例: 450"
-                        keyboardType="numeric"
-                        value={actualCost}
-                        onChangeText={setActualCost}
-                    />
+                {/* 実行ログ記録 */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>✅ 実行ログを記録</Text>
+                    <View style={styles.logForm}>
+                        <Text style={styles.inputLabel}>実際にかかった費用</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="例: 450"
+                            keyboardType="numeric"
+                            value={actualCost}
+                            onChangeText={setActualCost}
+                        />
 
-                    <Text style={styles.inputLabel}>メモ（任意）</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="例: 美味しかった、次回は調味料を減らす"
-                        multiline
-                        numberOfLines={3}
-                        value={notes}
-                        onChangeText={setNotes}
-                        textAlignVertical="top"
-                    />
+                        <Text style={styles.inputLabel}>メモ（任意）</Text>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="例: 美味しかった、次回は調味料を減らす"
+                            multiline
+                            numberOfLines={3}
+                            value={notes}
+                            onChangeText={setNotes}
+                            textAlignVertical="top"
+                        />
 
-                    <TouchableOpacity style={styles.logButton} onPress={handleLogMeal}>
-                        <Text style={styles.logButtonText}>📝 記録する</Text>
+                        <TouchableOpacity style={styles.logButton} onPress={handleLogMeal}>
+                            <Text style={styles.logButtonText}>記録する</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* AI再提案ボタン */}
+                <View style={styles.section}>
+                    <TouchableOpacity
+                        style={[
+                            styles.regenerateButton,
+                            regenerating && styles.buttonDisabled,
+                        ]}
+                        onPress={handleRegenerate}
+                        disabled={regenerating}
+                    >
+                        <View style={styles.buttonContent}>
+                            <Ionicons name="sparkles-outline" size={20} color="white" />
+                            <Text style={styles.generateText}>献立を再生成</Text>
+                        </View>
                     </TouchableOpacity>
                 </View>
-            </View>
 
-            {/* AI再提案ボタン */}
-            <View style={styles.section}>
-                <TouchableOpacity
-                    style={[
-                        styles.regenerateButton,
-                        regenerating && styles.buttonDisabled,
-                    ]}
-                    onPress={handleRegenerate}
-                    disabled={regenerating}
-                >
-                    {regenerating ? (
-                        <ActivityIndicator color="#000" />
-                    ) : (
-                        <Text style={styles.regenerateButtonText}>
-                            🤖 AI再提案 {!isPremium && '(Premium)'}
-                        </Text>
-                    )}
-                </TouchableOpacity>
-            </View>
-
-            {/* 作成日時 */}
-            {meal.created_at && (
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>作成日時: {meal.created_at}</Text>
-                </View>
-            )}
-        </ScrollView>
+                {/* 作成日時 */}
+                {meal.created_at && (
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>作成日時: {meal.created_at}</Text>
+                    </View>
+                )}
+            </KeyboardAwareScrollView >
+            <LoadingOverlay visible={isLoading} message='献立生成中' />
+        </>
     );
 }
 
@@ -512,5 +522,16 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#666',
         marginTop: 40,
+    },
+    generateText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    buttonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
     },
 });

@@ -19,6 +19,7 @@ LocaleConfig.defaultLocale = 'ja';
 
 // 祝日データのキャッシュ（Holidays JP APIから取得）
 let holidaysCache: { [key: string]: string } = {};
+type DateFormat = 'full' | 'date-only';
 
 
 interface DayMeals {
@@ -33,6 +34,14 @@ export default function CalendarScreen() {
     const [selectedDayMeals, setSelectedDayMeals] = useState<DayMeals | null>(null);
     const [allPlans, setAllPlans] = useState<MealPlan[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [loadingMassage, setLoadingMassage] = useState<string>('');
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+
+    const startOfMonth = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endOfMonth = `${year}-${String(month).padStart(2, '0')}-31`;
+
 
     useEffect(() => {
         if (allPlans.length > 0) {
@@ -45,6 +54,7 @@ export default function CalendarScreen() {
         useCallback(() => {
             (async () => {
                 setIsLoading(true);
+                setLoadingMassage('読み込み中');
                 await loadHolidays();
                 await loadMonthData();
                 setIsLoading(false);
@@ -89,10 +99,7 @@ export default function CalendarScreen() {
     const loadMonthData = async () => {
         const today = new Date();
         const month = today.toISOString().substring(0, 7);
-
-        const mealPlanRepo = ServiceFactory.getMealPlanRepository();
-        const plans = await mealPlanRepo.findByDateRange(`${month}-01`, `${month}-31`);
-
+        const plans = await getPlans(month);
         setAllPlans(plans);
 
         const marked: any = {};
@@ -153,6 +160,12 @@ export default function CalendarScreen() {
         selectDate(todayStr);
     };
 
+    const getPlans = async (month: string): Promise<MealPlan[]> => {
+        const mealPlanRepo = ServiceFactory.getMealPlanRepository();
+        const plans = await mealPlanRepo.findByDateRange(`${month}-01`, `${month}-31`);
+        return plans;
+    };
+
     const selectDate = (dateStr: string) => {
         const dayMeals: DayMeals = {
             breakfast: allPlans.find(p => p.date === dateStr && p.meal_type === 'breakfast'),
@@ -168,11 +181,11 @@ export default function CalendarScreen() {
         selectDate(day.dateString);
     };
 
-    const getTotalCalories = (dayMeals: DayMeals | null) => {
+    const getTotalEstimatedCost = (dayMeals: DayMeals | null) => {
         if (!dayMeals) return 0;
-        const breakfast = dayMeals.breakfast?.nutrition.calories || 0;
-        const lunch = dayMeals.lunch?.nutrition.calories || 0;
-        const dinner = dayMeals.dinner?.nutrition.calories || 0;
+        const breakfast = dayMeals.breakfast?.estimated_cost || 0;
+        const lunch = dayMeals.lunch?.estimated_cost || 0;
+        const dinner = dayMeals.dinner?.estimated_cost || 0;
         return breakfast + lunch + dinner;
     };
 
@@ -181,16 +194,66 @@ export default function CalendarScreen() {
         return !!(dayMeals.breakfast || dayMeals.lunch || dayMeals.dinner);
     };
 
+
+    const todayMealEdit = async () => {
+        setIsLoading(true);
+        try {
+            const mealPlanService = ServiceFactory.createMealPlanService();
+            await mealPlanService.regenerateTodayMeal(selectedDate!);
+            Alert.alert('成功', '献立を生成しました！', [
+                {
+                    text: 'OK', onPress: async () => {
+                        setIsLoading(true);
+                        await loadMonthData();
+                        setIsLoading(false);
+                    }
+                },
+            ]);
+        } catch (error: any) {
+            console.log(selectedDate);
+            Alert.alert('エラー', error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     const handleEdit = () => {
-        alert(`${selectedDate}の献立を編集します`);
+        Alert.alert(
+            '確認',
+            `${formatDate(selectedDate, 'date-only')}の献立を変更しますか？`,
+            [
+                {
+                    text: 'はい',
+                    onPress: async () => {
+                        await todayMealEdit();
+                    }
+                },
+                {
+                    text: 'キャンセル',
+                    onPress: () => {
+                    }
+                }
+            ]
+        );
     };
 
-    const formatDate = (dateStr: string | null) => {
+    const handleSetting = () => {
+        router.push('/mealPlanGenerate');
+    }
+
+
+    const formatDate = (dateStr: string | null, format: DateFormat = 'full') => {
         if (!dateStr) return '';
         const date = new Date(dateStr);
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
         const day = date.getDate();
+
+        if (format === 'date-only') {
+            return `${year}年${month}月${day}日`;
+        }
+
+        // format === 'full'
         const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
         const holiday = holidaysCache[dateStr];
 
@@ -220,7 +283,7 @@ export default function CalendarScreen() {
         const meal = selectedDayMeals?.[mealType];
         return (
             <View style={styles.mealSection}>
-                <View>
+                <View style={{ flex: 1 }}>
                     <Text style={styles.mealLabel}>
                         {mealType === 'breakfast'
                             ? '🌅 朝食'
@@ -278,13 +341,13 @@ export default function CalendarScreen() {
                                 <MealItem selectedDayMeals={selectedDayMeals} mealType={'lunch'} />
                                 <MealItem selectedDayMeals={selectedDayMeals} mealType={'dinner'} />
                                 <View style={styles.totalSection}>
-                                    <Text style={styles.totalLabel}>合計カロリー</Text>
-                                    <Text style={styles.totalCalories}>{getTotalCalories(selectedDayMeals)} kcal</Text>
+                                    <Text style={styles.totalLabel}>合計金額</Text>
+                                    <Text style={styles.totalCalories}>¥{getTotalEstimatedCost(selectedDayMeals)}</Text>
                                 </View>
                             </>
                         ) : (
                             <View style={styles.noPlanContainer}>
-                                <Text style={styles.noPlanText}>この日の献立はまだ登録されていません</Text>
+                                <Text style={styles.noPlanText}>献立がまだ登録されていません</Text>
                             </View>
                         )}
                     </>
@@ -295,9 +358,9 @@ export default function CalendarScreen() {
 
     const MealEditButton = () => {
         return (
-            <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+            <TouchableOpacity style={styles.editButton} onPress={hasMeals(selectedDayMeals) ? handleEdit : handleSetting}>
                 <Text style={styles.editButtonText}>
-                    {hasMeals(selectedDayMeals) ? '📝 献立を編集' : '➕ 献立を追加'}
+                    {hasMeals(selectedDayMeals) ? ' 献立を変更' : '献立を設定'}
                 </Text>
             </TouchableOpacity>
         );
@@ -307,6 +370,7 @@ export default function CalendarScreen() {
         <>
             <View style={styles.container}>
                 <Calendar
+                    hideArrows={true}
                     markedDates={{
                         ...markedDates,
                         [selectedDate || '']: {
@@ -317,6 +381,8 @@ export default function CalendarScreen() {
                     }}
                     onDayPress={onDayPress}
                     markingType={'custom'}
+                    minDate={startOfMonth}
+                    maxDate={endOfMonth}
                     renderHeader={(date) => {
                         const month = date.getMonth() + 1;
                         const year = date.getFullYear();
@@ -346,7 +412,7 @@ export default function CalendarScreen() {
                     <MealEditButton />
                 </View>
             </View>
-            <LoadingOverlay visible={isLoading} />
+            <LoadingOverlay visible={isLoading} message={loadingMassage} />
         </>
     );
 };
@@ -403,6 +469,7 @@ const styles = StyleSheet.create({
     },
     mealContent: {
         marginLeft: 10,
+        flex: 1
     },
     mealName: {
         fontSize: 15,

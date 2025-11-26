@@ -24,6 +24,15 @@ export class BudgetService {
         });
     }
 
+    async updateBudget(monthlyBudget: number, month: string): Promise<void> {
+        const dailyBudget = Math.floor(monthlyBudget / 30);
+        await this.budgetRepo.update({
+            month,
+            total_budget: monthlyBudget,
+            daily_budget: dailyBudget,
+        });
+    }
+
     async getRemainingBudget(month: string): Promise<number> {
         const budget = await this.budgetRepo.findByMonth(month);
         if (!budget) return 0;

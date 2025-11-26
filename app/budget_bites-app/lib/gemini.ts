@@ -2,8 +2,6 @@
 
 import { Config } from '../constants/config';
 import { Budget, MealPlan, Preferences } from '../types/types';
-import { GoogleGenAI } from "@google/genai";
-import { GoogleGenerativeAI } from '@google/generative-ai';
 export interface GeminiMealPlanRequest {
   month: string;
   budget: Budget;
@@ -45,6 +43,7 @@ export class GeminiService {
           },
         }),
       });
+
       // エラーチェック（最初の1回だけ）
       if (!response.ok) {
         const errorText = await response.text();
@@ -52,7 +51,6 @@ export class GeminiService {
       }
 
       const data = await response.json();
-      console.log(response.status);
       const candidate = data.candidates[0];
 
       if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
@@ -89,6 +87,9 @@ export class GeminiService {
       return result;
 
     } catch (error) {
+      if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('Network request failed'))) {
+        throw new Error('ネットワークに接続されていません。接続を確認してください。');
+      }
       throw error;
     }
   }
@@ -120,7 +121,7 @@ export class GeminiService {
             temperature: 0.8,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 65536,
             responseMimeType: 'application/json',
           },
         }),
@@ -146,12 +147,92 @@ export class GeminiService {
         }
         result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
       }
-
-      console.log('日別献立生成成功');
       return result;
 
     } catch (error) {
-      console.error('日別献立生成エラー:', error);
+      if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+        throw new Error('ネットワークに接続されていません。接続を確認してください。');
+      }
+      throw error;
+    }
+  }
+
+
+
+  static async regenerateTodayMeal(
+    date: string,
+    request: GeminiMealPlanRequest
+  ): Promise<GeminiResponse> {
+    if (!this.apiKey) {
+      throw new Error('Gemini APIキーが設定されていません');
+    }
+
+    const prompt = this.buildTodayPrompt(date, request);
+
+    try {
+      const response = await fetch(this.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 65536,
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+
+      // エラーチェック（最初の1回だけ）
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json();
+      const candidate = data.candidates[0];
+
+      if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+        console.error('content.parts が空:', JSON.stringify(candidate, null, 2));
+        throw new Error('Gemini APIのレスポンス形式が不正です');
+      }
+
+      const text = candidate.content.parts[0].text;
+
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (e) {
+        // パース失敗時は ```json ``` で囲まれている可能性
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+
+        if (!jsonMatch) {
+          console.error('JSON抽出失敗。テキスト全体:', text);
+          throw new Error('JSONレスポンスの抽出に失敗しました');
+        }
+
+        const jsonText = jsonMatch[1] || jsonMatch[0];
+        result = JSON.parse(jsonText);
+      }
+
+      // 結果の検証
+      if (!result.plans || !Array.isArray(result.plans)) {
+        console.error('plans配列がありません:', result);
+        throw new Error('レスポンスにplans配列がありません');
+      }
+      return result;
+
+    } catch (error) {
+      if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+        throw new Error('ネットワークに接続されていません。接続を確認してください。');
+      }
       throw error;
     }
   }
@@ -175,6 +256,8 @@ export class GeminiService {
 - 避けたい食材: ${preferences.avoid_ingredients.length > 0 ? preferences.avoid_ingredients.join(', ') : 'なし'}
 - 日数: ${daysInMonth}日分
 - 手順：手順は、細かく具体的に、お願いします。（例：鍋に野菜を入れて、3分茹でる）
+- 金額：金額は、3食（朝・昼・晩）の合計金額が、1日あたり予算の金額になるようにお願いします。
+- 推定費用：推定費用は、ingredientsのcostの合計金額と同じになるようにしてください。
 
 【出力形式】
 以下のJSON形式で、${daysInMonth}日分 × 3食（朝・昼・晩）の献立を返してください。
@@ -218,7 +301,8 @@ export class GeminiService {
 - アレルギー: ${preferences.allergies.length > 0 ? preferences.allergies.join(', ') : 'なし'}
 - 避けたい食材: ${preferences.avoid_ingredients.length > 0 ? preferences.avoid_ingredients.join(', ') : 'なし'}
 - 手順：　手順は、細かく具体的に、お願いします。（例：鍋に野菜を入れて、3分茹でる）
-
+- 金額：金額は、3食（朝・昼・晩）の合計金額が、1日あたり予算の金額になるようにお願いします。
+- 推定費用：推定費用は、ingredientsにある全てのcostの合計金額と同じになるようにしてください。
 【出力形式】
 以下のJSON形式で返してください。
 
@@ -227,12 +311,54 @@ export class GeminiService {
   "date": "${date}",
   "meal_type": "${mealType}",
   "menu_name": "メニュー名",
-  "ingredients": [{ "name": "材料名", "amount": "分量", "cost": 価格 }],
+  "ingredients": [
+        { "name": "食パン", "amount": "1枚", "cost": 30 },
+        { "name": "バター", "amount": "10g", "cost": 20 }
+  ],
   "recipe": ["手順1", "手順2"],
   "nutrition": { "calories": 0, "protein": 0, "fat": 0, "carbs": 0 },
   "cooking_time": 0,
-  "estimated_cost": 0
+  "estimated_cost": 50
 }
+\`\`\``;
+  }
+
+  private static buildTodayPrompt(
+    date: string,
+    request: GeminiMealPlanRequest
+  ): string {
+    const { budget, preferences } = request;
+
+    return `あなたは栄養士兼料理人のAIアシスタントです。
+以下の条件に基づいて、${date}の献立を生成してください。
+
+【条件】
+- 1食あたり予算: ¥${Math.floor(budget.daily_budget / 3)}
+- 味付け: ${preferences.taste_preference === 'light' ? 'あっさり' : preferences.taste_preference === 'balanced' ? 'バランス' : '濃いめ'}
+- アレルギー: ${preferences.allergies.length > 0 ? preferences.allergies.join(', ') : 'なし'}
+- 避けたい食材: ${preferences.avoid_ingredients.length > 0 ? preferences.avoid_ingredients.join(', ') : 'なし'}
+- 手順：　手順は、細かく具体的に、お願いします。（例：鍋に野菜を入れて、3分茹でる）
+- 金額：金額は、3食（朝・昼・晩）の合計金額が、1日あたり予算の金額になるようにお願いします。
+- 推定費用：推定費用は、ingredientsのcostの合計金額と同じになるようにしてください。
+【出力形式】
+
+以下のJSON形式で、${date}分 × 3食（朝・昼・晩）の献立を返してください。
+\`\`\`json
+  "plans": [
+    {
+      "date": "${date}",
+      "meal_type": "breakfast",
+      "menu_name": "和風トースト",
+      "ingredients": [
+        { "name": "食パン", "amount": "1枚", "cost": 30 },
+        { "name": "バター", "amount": "10g", "cost": 20 }
+      ],
+      "recipe": ["食パンをトーストする", "バターを塗る"],
+      "nutrition": { "calories": 250, "protein": 5, "fat": 8, "carbs": 40 },
+      "cooking_time": 5,
+      "estimated_cost": 50
+    }
+  ]
 \`\`\``;
   }
 }
