@@ -109,15 +109,11 @@ export default function PreferenceSetupScreen() {
             Alert.alert('エラー', '有効な予算を入力してください（最低 ¥10,000）');
             return;
         }
-
-        const today = new Date();
-        const month = today.toISOString().substring(0, 7);
-
         try {
             const budgetService = ServiceFactory.createBudgetService();
             const preferencesRepo = ServiceFactory.getPreferencesRepository();
 
-            await budgetService.setBudget(budgetNum, month);
+            await budgetService.updateBudget(budgetNum);
 
             // アレルギーと避けたい食材のラベルを取得
             const allergyLabels = selectedAllergies.map((id) => {
@@ -136,7 +132,7 @@ export default function PreferenceSetupScreen() {
             });
 
             Alert.alert('成功', '設定を保存しました', [
-                { text: 'OK', onPress: () => router.push('/') },
+                { text: 'OK', onPress: () => router.back() },
             ]);
         } catch (error: any) {
             Alert.alert('エラー', error.message);

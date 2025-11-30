@@ -24,7 +24,7 @@ export default function BudgetEditScreen() {
         setIsLoading(true);
         try {
             const budgetService = ServiceFactory.createBudgetService();
-            const budgetData = await budgetService.getCurrentMonthBudget();
+            const budgetData = await budgetService.getCurrentBudget();
             if (budgetData != null) {
                 setBudget(budgetData.total_budget.toString());
             }
@@ -71,12 +71,9 @@ export default function BudgetEditScreen() {
             return;
         }
 
-        const today = new Date();
-        const month = today.toISOString().substring(0, 7);
-
         try {
             const budgetService = ServiceFactory.createBudgetService();
-            await budgetService.updateBudget(budgetNum, month);
+            await budgetService.updateBudget(budgetNum);
             Alert.alert('成功', '予算を変更しましたので、献立を再生成します。', [
                 {
                     text: 'OK', onPress: async () => {

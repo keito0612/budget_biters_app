@@ -197,6 +197,7 @@ export default function CalendarScreen() {
 
     const todayMealEdit = async () => {
         setIsLoading(true);
+        setLoadingMassage('献立を変更中');
         try {
             const mealPlanService = ServiceFactory.createMealPlanService();
             await mealPlanService.regenerateTodayMeal(selectedDate!);
@@ -210,7 +211,6 @@ export default function CalendarScreen() {
                 },
             ]);
         } catch (error: any) {
-            console.log(selectedDate);
             Alert.alert('エラー', error.message);
         } finally {
             setIsLoading(false);

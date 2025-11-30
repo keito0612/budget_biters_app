@@ -9,7 +9,6 @@ export interface Preferences {
 
 export interface Budget {
     id?: number;
-    month: string; // YYYY-MM
     total_budget: number;
     daily_budget: number;
     created_at?: string;

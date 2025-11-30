@@ -16,7 +16,7 @@ export default function Layout() {
     return (
         <Stack >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="login" options={{ title: 'ログイン', presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="preferenceSetUp" singular={true} options={{ title: '初期設定', headerShown: true, header: () => <CustomHeader title={'初期設定'} showBackButton={true} /> }} />
             <Stack.Screen name="mealPlanGenerate" options={{ title: 'AI献立生成', headerShown: true, header: () => <CustomHeader title={'AI献立生成'} showBackButton={true} /> }} />
             <Stack.Screen name="mealDetail" options={{ title: '献立詳細', headerShown: true, header: () => <CustomHeader title={'献立詳細'} showBackButton={true} /> }} />

@@ -23,7 +23,7 @@ export default function HomeScreen() {
         const budgetService = ServiceFactory.createBudgetService();
         const mealPlanService = ServiceFactory.createMealPlanService();
 
-        const budget = await budgetService.getCurrentMonthBudget();
+        const budget = await budgetService.getCurrentBudget();
         setCurrentBudget(budget);
 
         if (budget) {
@@ -45,7 +45,7 @@ export default function HomeScreen() {
         return (
             <View style={styles.card}>
                 <View style={styles.cardTitleContainer}>
-                    <Text style={styles.cardTitle}>今月の予算</Text>
+                    <Text style={styles.cardTitle}>月間食費予算</Text>
                     <TouchableOpacity onPress={() => {
                         router.push('/budgetEdit');
                     }}>
@@ -91,7 +91,7 @@ export default function HomeScreen() {
 
     return (
         <ScrollView style={styles.container}>
-            {currentBudget ? (
+            {currentBudget?.total_budget !== 0 ? (
                 <>
                     <MonthBudgetCard currentBudget={currentBudget} />
                 </>
@@ -254,10 +254,11 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     noText: {
+        paddingVertical: 16,
         fontSize: 16,
-        fontWeight: '300',
+        fontWeight: '500',
         textAlign: 'center',
-        marginVertical: 8
+        marginVertical: 8,
     },
     viewDetail: {
         fontSize: 14,

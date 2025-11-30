@@ -12,7 +12,7 @@ export class MealPlanService {
     ) { }
 
     async generateMonthlyPlan(month: string): Promise<void> {
-        const budget = await this.budgetRepo.findByMonth(month);
+        const budget = await this.budgetRepo.get();
         if (!budget) throw new Error('予算が設定されていません');
 
         const preferences = await this.preferencesRepo.get();
@@ -30,7 +30,7 @@ export class MealPlanService {
         date: string,
     ): Promise<void> {
         const month = date.substring(0, 7);
-        const budget = await this.budgetRepo.findByMonth(month);
+        const budget = await this.budgetRepo.get();
         if (!budget) throw new Error('予算が設定されていません');
         const preferences = await this.preferencesRepo.get();
         const response = await GeminiService.regenerateTodayMeal(date, {
@@ -46,7 +46,7 @@ export class MealPlanService {
         mealType: 'breakfast' | 'lunch' | 'dinner'
     ): Promise<void> {
         const month = date.substring(0, 7);
-        const budget = await this.budgetRepo.findByMonth(month);
+        const budget = await this.budgetRepo.get();
         if (!budget) throw new Error('予算が設定されていません');
 
         const preferences = await this.preferencesRepo.get();

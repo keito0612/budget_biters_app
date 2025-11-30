@@ -2,8 +2,7 @@ import { dbConnection } from "../database/databaseConnection";
 import { Budget } from "../types/types";
 
 export interface BudgetRepository {
-    findByMonth(month: string): Promise<Budget | null>;
-    findAll(): Promise<Budget[]>;
+    get(): Promise<Budget | null>;
     save(budget: Omit<Budget, 'id' | 'created_at' | 'updated_at'>): Promise<void>;
     update(budget: Omit<Budget, 'id' | 'created_at' | 'updated_at'>): Promise<void>;
     delete(month: string): Promise<void>;
@@ -11,25 +10,17 @@ export interface BudgetRepository {
 
 
 export class BudgetRepositoryImpl implements BudgetRepository {
-    async findByMonth(month: string): Promise<Budget | null> {
-        const rows = await dbConnection.query<Budget>(
-            'SELECT * FROM budgets WHERE month = ?',
-            [month]
+    async get(): Promise<Budget | null> {
+        const rows = await dbConnection.query<any>(
+            'SELECT * FROM budgets WHERE id = 1'
         );
-        return rows[0] || null;
+        return rows[0];
     }
-
-    async findAll(): Promise<Budget[]> {
-        return dbConnection.query<Budget>(
-            'SELECT * FROM budgets ORDER BY month DESC'
-        );
-    }
-
     async save(budget: Omit<Budget, 'id' | 'created_at' | 'updated_at'>): Promise<void> {
         await dbConnection.execute(
-            `INSERT OR REPLACE INTO budgets (month, total_budget, daily_budget, updated_at)
+            `INSERT OR REPLACE INTO budgets (total_budget, daily_budget, updated_at)
        VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
-            [budget.month, budget.total_budget, budget.daily_budget]
+            [budget.total_budget, budget.daily_budget]
         );
     }
 
@@ -37,8 +28,8 @@ export class BudgetRepositoryImpl implements BudgetRepository {
         await dbConnection.execute(
             `UPDATE budgets
          SET total_budget = ?, daily_budget = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE month = ?`,
-            [budget.total_budget, budget.daily_budget, budget.month]
+         WHERE id = 1`,
+            [budget.total_budget, budget.daily_budget]
         );
     }
 

@@ -9,32 +9,28 @@ export class BudgetService {
         private mealLogRepo: MealLogRepository
     ) { }
 
-    async getCurrentMonthBudget(): Promise<Budget | null> {
-        const today = new Date();
-        const month = today.toISOString().substring(0, 7);
-        return this.budgetRepo.findByMonth(month);
+    async getCurrentBudget(): Promise<Budget | null> {
+        return this.budgetRepo.get();
     }
 
-    async setBudget(monthlyBudget: number, month: string): Promise<void> {
+    async setBudget(monthlyBudget: number): Promise<void> {
         const dailyBudget = Math.floor(monthlyBudget / 30);
         await this.budgetRepo.save({
-            month,
             total_budget: monthlyBudget,
             daily_budget: dailyBudget,
         });
     }
 
-    async updateBudget(monthlyBudget: number, month: string): Promise<void> {
+    async updateBudget(monthlyBudget: number): Promise<void> {
         const dailyBudget = Math.floor(monthlyBudget / 30);
         await this.budgetRepo.update({
-            month,
             total_budget: monthlyBudget,
             daily_budget: dailyBudget,
         });
     }
 
     async getRemainingBudget(month: string): Promise<number> {
-        const budget = await this.budgetRepo.findByMonth(month);
+        const budget = await this.budgetRepo.get();
         if (!budget) return 0;
 
         const spent = await this.mealLogRepo.getTotalSpentByMonth(month);
@@ -47,7 +43,7 @@ export class BudgetService {
         remaining: number;
         percentage: number;
     }> {
-        const budget = await this.budgetRepo.findByMonth(month);
+        const budget = await this.budgetRepo.get();
         if (!budget) {
             return { total: 0, spent: 0, remaining: 0, percentage: 0 };
         }

@@ -17,8 +17,10 @@ export class DatabaseConnection {
         if (this.db) return;
 
         this.db = await SQLite.openDatabaseAsync(dbName);
-        await this.createTables();
-        await this.initializeDefaults();
+        if (this.db === undefined) {
+            await this.createTables();
+            await this.initializeDefaults();
+        }
     }
 
     getDatabase(): SQLite.SQLiteDatabase {
@@ -59,8 +61,7 @@ export class DatabaseConnection {
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )`,
             `CREATE TABLE IF NOT EXISTS budgets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        month TEXT NOT NULL UNIQUE,
+        id INTEGER PRIMARY KEY CHECK (id = 1),
         total_budget INTEGER NOT NULL,
         daily_budget INTEGER NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -166,6 +167,7 @@ export class DatabaseConnection {
       INSERT OR IGNORE INTO backup_settings (id, auto_backup)
       VALUES (1, 0)
     `);
+        await this.execute('INSERT INTO budgets (id, total_budget, daily_budget) VALUES(1, 0, 0)')
     }
 }
 
