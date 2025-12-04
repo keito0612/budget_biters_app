@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -8,7 +8,7 @@ import {
     StyleSheet,
     Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ServiceFactory } from '../factories/serviceFactory';
 
 
@@ -64,6 +64,8 @@ export default function PreferenceSetupScreen() {
     const [selectedAvoidIngredients, setSelectedAvoidIngredients] = useState<string[]>([]);
     const [customAllergy, setCustomAllergy] = useState('');
     const [customAvoidIngredient, setCustomAvoidIngredient] = useState('');
+    const { mode } = useLocalSearchParams();
+    const isEdit = mode === "edit";
 
     const toggleAllergy = (allergyId: string) => {
         setSelectedAllergies((prev) =>
@@ -102,6 +104,43 @@ export default function PreferenceSetupScreen() {
     const removeAvoidIngredient = (ingredient: string) => {
         setSelectedAvoidIngredients((prev) => prev.filter((item) => item !== ingredient));
     };
+
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const budgetService = ServiceFactory.createBudgetService();
+                const preferencesRepo = ServiceFactory.getPreferencesRepository();
+
+                const currentBudget = await budgetService.getCurrentBudget();
+                const currentPrefs = await preferencesRepo.get();
+
+                if (currentBudget) setBudget(currentBudget.total_budget.toString());
+
+                if (currentPrefs) {
+                    setTastePreference(currentPrefs.taste_preference);
+                    setSelectedAllergies(
+                        currentPrefs.allergies.map((label: string) => {
+                            const found = COMMON_ALLERGIES.find(a => a.label === label);
+                            return found ? found.id : label; // カスタムはそのまま
+                        })
+                    );
+                    setSelectedAvoidIngredients(
+                        currentPrefs.avoid_ingredients.map((label: string) => {
+                            const found = COMMON_AVOID_INGREDIENTS.find(a => a.label === label);
+                            return found ? found.id : label;
+                        })
+                    );
+                }
+            } catch (e) {
+                console.log(e);
+            }
+        };
+
+        if (isEdit) {
+            loadData();
+        }
+    }, [isEdit]);
 
     const handleSubmit = async () => {
         const budgetNum = parseInt(budget);
@@ -498,7 +537,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     addButton: {
-        backgroundColor: '#34C759',
+        backgroundColor: '#007AFF',
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 8,

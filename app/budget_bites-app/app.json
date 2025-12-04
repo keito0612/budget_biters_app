@@ -30,7 +30,15 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-xxxxxxxxxxxxx~yyyyyyyyyy",
+          "iosAppId": "ca-app-pub-8369847853540237~3106440839",
+          "user_tracking_usage_description": "許可することで、より関連性の高い広告を表示することができるようになります。"
+        }
+      ]
     ]
   }
 }

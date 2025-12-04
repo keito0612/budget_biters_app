@@ -17,7 +17,8 @@ export class DatabaseConnection {
         if (this.db) return;
 
         this.db = await SQLite.openDatabaseAsync(dbName);
-        if (this.db === undefined) {
+        const tableExists = await this.checkTableExists('budgets');
+        if (!tableExists) {
             await this.createTables();
             await this.initializeDefaults();
         }
@@ -48,6 +49,18 @@ export class DatabaseConnection {
 
     async query<T>(query: string, params: any[] = []): Promise<T[]> {
         return await this.getDatabase().getAllAsync<T>(query, params);
+    }
+
+    private async checkTableExists(tableName: string): Promise<boolean> {
+        try {
+            const result = await this.getDatabase().getAllAsync(
+                `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+                [tableName]
+            );
+            return result.length > 0;
+        } catch (error) {
+            return false;
+        }
     }
 
     private async createTables(): Promise<void> {

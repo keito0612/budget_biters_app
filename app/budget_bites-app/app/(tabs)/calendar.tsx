@@ -181,11 +181,11 @@ export default function CalendarScreen() {
         selectDate(day.dateString);
     };
 
-    const getTotalEstimatedCost = (dayMeals: DayMeals | null) => {
+    const getTotalCalories = (dayMeals: DayMeals | null) => {
         if (!dayMeals) return 0;
-        const breakfast = dayMeals.breakfast?.estimated_cost || 0;
-        const lunch = dayMeals.lunch?.estimated_cost || 0;
-        const dinner = dayMeals.dinner?.estimated_cost || 0;
+        const breakfast = dayMeals.breakfast?.nutrition.calories || 0;
+        const lunch = dayMeals.lunch?.nutrition.calories || 0;
+        const dinner = dayMeals.dinner?.nutrition.calories || 0;
         return breakfast + lunch + dinner;
     };
 
@@ -341,8 +341,8 @@ export default function CalendarScreen() {
                                 <MealItem selectedDayMeals={selectedDayMeals} mealType={'lunch'} />
                                 <MealItem selectedDayMeals={selectedDayMeals} mealType={'dinner'} />
                                 <View style={styles.totalSection}>
-                                    <Text style={styles.totalLabel}>合計金額</Text>
-                                    <Text style={styles.totalCalories}>¥{getTotalEstimatedCost(selectedDayMeals)}</Text>
+                                    <Text style={styles.totalLabel}>合計カロリー</Text>
+                                    <Text style={styles.totalCalories}>{getTotalCalories(selectedDayMeals)} kcal</Text>
                                 </View>
                             </>
                         ) : (
@@ -436,6 +436,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderTopWidth: 1,
         borderTopColor: '#e0e0e0',
+        paddingBottom: 50
     },
     dateHeader: {
         padding: 15,

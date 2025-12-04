@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { usePremium } from '../../hooks/usePremium';
 import { useAuth } from '../../hooks/useAuth';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { ServiceFactory } from '../../factories/serviceFactory';
 import { AlertDialog } from '../../components/AlertDialog';
 import { AlertType } from '../../types/types';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/build/MaterialIcons';
 
-
-export default function ProfileScreen() {
+export default function SettingScreen() {
     const router = useRouter();
     const { isPremium } = usePremium();
     const { isLoggedIn } = useAuth();
@@ -42,40 +43,50 @@ export default function ProfileScreen() {
         }
     }
 
+    const handlePreferencesSetting = async () => {
+        router.push("/preferenceSetUp?mode=edit");
+    }
+
     return (
         <>
             <ScrollView style={styles.container}>
-
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>アカウント</Text>
-                    {isLoggedIn ? (
-                        <TouchableOpacity style={styles.item}>
-                            <Text style={styles.itemText}>✅ ログイン済み</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity style={styles.item} onPress={() => router.push('/login')}>
-                            <Text style={styles.itemText}>ログイン →</Text>
-                        </TouchableOpacity>
-                    )}
+                    <Link href={'https://docs.google.com/forms/d/e/1FAIpQLScRJEvNreuWdQaPid9DVduulPojNWohrdmgYRGhnqsCaFk1AQ/viewform?usp=preview'} >
+                        <View style={styles.item}>
+                            <MaterialCommunityIcons name="email" size={24} color="gray" />
+                            <Text style={styles.itemText}>
+                                お問い合わせ
+                            </Text>
+                        </View>
+                    </Link>
                 </View>
-
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Premium</Text>
-                    <TouchableOpacity style={styles.item} onPress={() => router.push('/subscription')}>
+                    <TouchableOpacity style={styles.item} onPress={handlePreferencesSetting}>
+                        <MaterialCommunityIcons name="tune" size={24} color="gray" />
                         <Text style={styles.itemText}>
-                            {isPremium ? '👑 Premium会員' : '⭐ Premiumに登録'}
+                            初期設定を編集
                         </Text>
                     </TouchableOpacity>
                 </View>
-
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>その他</Text>
+                    <TouchableOpacity style={styles.item} onPress={() => {
+                        router.push('https://keito0612.github.io/budget_biters_praivacy_poricy/');
+                    }}>
+                        <MaterialIcons name="privacy-tip" size={24} color="gray" />
+                        <Text style={styles.itemText}>
+                            プライバシーポリシー・利用規約
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.section}>
                     <TouchableOpacity style={styles.item} onPress={allDeleteClick}>
+                        <MaterialCommunityIcons name="delete-alert-outline" size={24} color="#fa0707" />
                         <Text style={styles.allDeleteText}>
                             全てのデータを削除
                         </Text>
                     </TouchableOpacity>
                 </View>
+
             </ScrollView>
             <AlertDialog title={alertTitle} message={alertMessage} visible={showAlert} alertType={alertType} cancelClick={() => {
                 setShowAlert(false);
@@ -87,7 +98,9 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: 'white',
+        paddingHorizontal: 16,
+        paddingTop: 16
     },
     header: {
         flexDirection: 'row',
@@ -102,8 +115,9 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     section: {
-        marginTop: 16,
         backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
     sectionTitle: {
         fontSize: 14,
@@ -113,15 +127,18 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
     },
     item: {
-        padding: 16,
+        paddingVertical: 24,
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        gap: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
     itemText: {
-        fontSize: 16,
+        fontSize: 18,
     },
     allDeleteText: {
-        fontSize: 16,
-        color: '#fa0707'
+        color: '#fa0707',
+        fontSize: 18,
     }
 });

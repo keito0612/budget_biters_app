@@ -43,7 +43,7 @@ export const CustomHeader: React.FC<Props> = ({
                     <Ionicons
                         name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
                         size={24}
-                        color="#007AFF"
+                        color="black"
                     />
                 </TouchableOpacity>
             ) : (

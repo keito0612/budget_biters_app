@@ -338,7 +338,6 @@ export class GeminiService {
 - アレルギー: ${preferences.allergies.length > 0 ? preferences.allergies.join(', ') : 'なし'}
 - 避けたい食材: ${preferences.avoid_ingredients.length > 0 ? preferences.avoid_ingredients.join(', ') : 'なし'}
 - 手順：　手順は、細かく具体的に、お願いします。（例：鍋に野菜を入れて、3分茹でる）
-- 1日あたりの金額：金額は、3食（朝・昼・晩）の合計金額が、1日あたり予算の金額になるようにお願いします。
 - 推定費用：推定費用は、ingredientsのcostの合計金額と同じになるようにしてください。
 【出力形式】
 

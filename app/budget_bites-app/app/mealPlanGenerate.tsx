@@ -18,8 +18,7 @@ export default function MealPlanGenerateScreen() {
         setCurrentMonth(today.toISOString().substring(0, 7));
     });
 
-
-    const handleGenerate = async () => {
+    const generateMonthlyPlan = async () => {
         setLoading(true);
         try {
             const mealPlanService = ServiceFactory.createMealPlanService();
@@ -33,6 +32,9 @@ export default function MealPlanGenerateScreen() {
         } finally {
             setLoading(false);
         }
+    }
+    const handleGenerate = async () => {
+        await generateMonthlyPlan();
     };
 
     return (

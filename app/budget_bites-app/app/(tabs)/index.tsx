@@ -5,6 +5,7 @@ import { usePremium } from '../../hooks/usePremium';
 import { Budget, MealPlan } from '../../types/types';
 import { ServiceFactory } from '../../factories/serviceFactory';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { AdmobService } from '../../services/admobService';
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -16,6 +17,7 @@ export default function HomeScreen() {
     useFocusEffect(
         useCallback(() => {
             loadData();
+            initialize();
         }, [])
     );
 
@@ -40,6 +42,11 @@ export default function HomeScreen() {
         });
         setTodayMeals(sortedMeals);
     };
+
+    const initialize = async () => {
+        const admodService = ServiceFactory.createAdmobService();
+        await admodService.initializeAds();
+    }
 
     const MonthBudgetCard = ({ currentBudget }: { currentBudget: Budget | null }) => {
         return (
@@ -104,7 +111,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
             )}
 
-            <View style={styles.card}>
+            <View style={[styles.card, { paddingBottom: 8 }]}>
                 <Text style={styles.cardTitle}>今日の献立</Text>
                 {todayMeals.length > 0 ? (
                     todayMeals.map((meal, index) =>
@@ -122,6 +129,7 @@ export default function HomeScreen() {
                     </View>
                 )}
             </View>
+
         </ScrollView>
     );
 }
@@ -145,7 +153,7 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: 'white',
-        margin: 16,
+        margin: 12,
         padding: 20,
         borderRadius: 12,
         shadowColor: '#000',
