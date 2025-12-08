@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
         paddingBottom: 50
     },
     dateHeader: {
-        padding: 15,
+        padding: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
         backgroundColor: '#fafafa',
@@ -530,8 +530,8 @@ const styles = StyleSheet.create({
     },
     editButton: {
         backgroundColor: '#007AFF',
-        margin: 15,
-        padding: 15,
+        margin: 12,
+        padding: 8,
         borderRadius: 10,
         alignItems: 'center',
     },

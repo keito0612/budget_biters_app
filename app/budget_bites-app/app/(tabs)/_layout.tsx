@@ -4,11 +4,26 @@ import { View, StyleSheet } from "react-native";
 import MyBanner from "../../components/MyBanner";
 import { CustomHeader } from "../../components/custom/CustomHeader";
 import { BannerAdSize } from "react-native-google-mobile-ads";
+import { Platform, Dimensions } from 'react-native';
 
 export default function TabLayout() {
+
+    const { height, width } = Dimensions.get('window');
+    // 画面高さが700px未満のiOSデバイスをSE系と見なす
+    const IS_IPHONE_SE_2_3 = Platform.OS === 'ios' && height < 700;
+
+    // SE専用のbottom値
+    const SE_BOTTOM_VALUE = 48;
+    // その他のデバイスのbottom値
+    const DEFAULT_BOTTOM_VALUE = 80;
+
+    // 現在のデバイスに応じた bottom の値を計算
+    const bannerBottomValue = IS_IPHONE_SE_2_3 ? SE_BOTTOM_VALUE : DEFAULT_BOTTOM_VALUE;
+
     return (
-        <View style={styles.container}>
+        <View style={staticStyles.container}>
             <Tabs
+                // ... (Tabsのオプションは省略)
                 screenOptions={{
                     headerShown: true,
                     tabBarActiveTintColor: "#007AFF",
@@ -16,6 +31,7 @@ export default function TabLayout() {
                     tabBarStyle: { backgroundColor: "#fff" },
                 }}
             >
+                {/* ... (Tabs.Screen の定義は省略) */}
                 <Tabs.Screen
                     name="index"
                     options={{
@@ -45,20 +61,25 @@ export default function TabLayout() {
                     }}
                 />
             </Tabs>
-            <View style={styles.bannerContainer}>
+            <View
+                style={[
+                    staticStyles.baseBannerContainer,
+                    { bottom: bannerBottomValue }
+                ]}
+            >
                 <MyBanner size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
             </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const staticStyles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    bannerContainer: {
+    // bannerContainerから動的なbottomプロパティを削除
+    baseBannerContainer: {
         position: 'absolute',
-        bottom: 80,
         left: 0,
         right: 0,
         justifyContent: 'center',

@@ -22,6 +22,15 @@ export default function MealPlanGenerateScreen() {
         setLoading(true);
         try {
             const mealPlanService = ServiceFactory.createMealPlanService();
+            const budgetService = ServiceFactory.createBudgetService();
+            const currentBudget = await budgetService.getCurrentBudget();
+
+            if (currentBudget?.total_budget === 0) {
+                Alert.alert('初期設定をしてください。', '', [
+                    { text: 'OK', onPress: () => { } }
+                ]);
+                return;
+            }
             await mealPlanService.generateMonthlyPlan(currentMonth);
 
             Alert.alert('成功', '献立を生成しました！', [

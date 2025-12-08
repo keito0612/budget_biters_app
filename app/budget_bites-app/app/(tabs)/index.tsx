@@ -111,7 +111,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
             )}
 
-            <View style={[styles.card, { paddingBottom: 8 }]}>
+            <View style={[styles.card, { paddingBottom: 8, marginBottom: 70 }]}>
                 <Text style={styles.cardTitle}>今日の献立</Text>
                 {todayMeals.length > 0 ? (
                     todayMeals.map((meal, index) =>
