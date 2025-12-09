@@ -279,7 +279,7 @@ export default function MealDetailScreen() {
                     </View>
                 )}
             </KeyboardAwareScrollView >
-            <LoadingOverlay visible={isLoading} message='献立生成中' />
+            <LoadingOverlay visible={isLoading} title='献立生成中' />
         </>
     );
 }

@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, View, Text, StyleSheet, Dimensions } from 'react-native';
 
 interface LoadingOverlayProps {
+    title?: string
     message?: string;
     visible: boolean;
 }
@@ -10,7 +11,8 @@ interface LoadingOverlayProps {
 const { width } = Dimensions.get('window');
 
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
-    message = '読み込み中...',
+    title = '読み込み中...',
+    message,
     visible,
 }) => {
     const dots = [useRef(new Animated.Value(1)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
@@ -69,6 +71,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
                         );
                     })}
                 </View>
+                <Text style={styles.title}>{title}</Text>
                 <Text style={styles.message}>{message}</Text>
             </View>
         </View>
@@ -101,10 +104,17 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         marginHorizontal: 5,
     },
-    message: {
+    title: {
         color: 'white',
         fontSize: 22,
         marginTop: 8,
         fontWeight: '500',
+        textAlign: 'center',
+    },
+    message: {
+        color: 'white',
+        fontSize: 16,
+        marginTop: 8,
+        fontWeight: '400',
     },
 });

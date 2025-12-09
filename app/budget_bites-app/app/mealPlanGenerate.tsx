@@ -66,7 +66,12 @@ export default function MealPlanGenerateScreen() {
                 </TouchableOpacity>
                 <LoginRequiredModal visible={showLoginModal} onClose={() => setShowLoginModal(false)} />
             </ScrollView>
-            <LoadingOverlay visible={loading} message="献立を生成中" />
+
+            <LoadingOverlay
+                title='献立を生成中'
+                visible={loading}
+                message={"献立の生成が終わるのに、1分以上かかる事があります。"}
+            />
         </>
     );
 }

@@ -412,7 +412,7 @@ export default function CalendarScreen() {
                     <MealEditButton />
                 </View>
             </View>
-            <LoadingOverlay visible={isLoading} message={loadingMassage} />
+            <LoadingOverlay visible={isLoading} title={loadingMassage} />
         </>
     );
 };

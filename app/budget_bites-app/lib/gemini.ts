@@ -47,7 +47,8 @@ export class GeminiService {
       // エラーチェック（最初の1回だけ）
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+        console.log(`Gemini API error (${response.status}): ${errorText}`);
+        throw new Error('サーバーに問題が発生しました。\n恐れ入りますが、しばらく経ってから再度お試しください。');
       }
 
       const data = await response.json();
@@ -90,7 +91,7 @@ export class GeminiService {
       if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('Network request failed'))) {
         throw new Error('ネットワークに接続されていません。接続を確認してください。');
       }
-      throw error;
+      throw new Error('サーバーに問題が発生しました。\n恐れ入りますが、しばらく経ってから再度お試しください。');
     }
   }
 

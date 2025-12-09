@@ -111,7 +111,7 @@ export default function BudgetEditScreen() {
                     <Text style={styles.submitText}>設定を保存</Text>
                 </TouchableOpacity>
             </ScrollView>
-            <LoadingOverlay visible={isLoading} message="献立を生成中" />
+            <LoadingOverlay visible={isLoading} title='献立を生成中' />
         </>
     );
 }
