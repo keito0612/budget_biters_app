@@ -9,8 +9,8 @@ export class MealTimeService {
         return mealTimes;
     }
 
-    async updateMealTime(id: number, mealTime: MealTime): Promise<void> {
-        await this.mealTimeRepo.updateMealTime(id, mealTime);
+    async updateMealTime(id: number, hour: number, minute: number): Promise<void> {
+        await this.mealTimeRepo.updateMealTime(id, hour, minute);
     }
     async updateEnabled(id: number, enabled: boolean) {
         await this.mealTimeRepo.updateEnabled(id, enabled);

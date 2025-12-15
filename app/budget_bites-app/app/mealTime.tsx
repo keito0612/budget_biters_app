@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Alert, Modal } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Modal } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { ServiceFactory } from '../factories/serviceFactory';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { MealTime } from '../types/types';
 import { DateUtils } from '../utils/DateUtils';
+import MyBanner from '../components/MyBanner';
+import { BannerAdSize } from "react-native-google-mobile-ads";
 
 export default function MealTimeScreen() {
     const [loading, setLoading] = useState(false);
@@ -15,10 +17,8 @@ export default function MealTimeScreen() {
     const [selectedMinute, setSelectedMinute] = useState(0);
     const [originalHour, setOriginalHour] = useState(12);
     const [originalMinute, setOriginalMinute] = useState(0);
-    const router = useRouter();
     const mealTimeService = ServiceFactory.createMealTimeService();
 
-    // 時間が変更されたかどうかを判定
     const isTimeChanged = selectedHour !== originalHour || selectedMinute !== originalMinute;
 
     useFocusEffect(
@@ -67,14 +67,12 @@ export default function MealTimeScreen() {
 
     const handleEditTime = (mealTime: MealTime) => {
         setSelectedMealTime(mealTime);
-        // 既存の時間があれば、それを初期値として設定
-        if (mealTime.hour) {
+        if (mealTime.hour !== undefined && mealTime.hour !== null) {
             setSelectedHour(mealTime.hour);
             setSelectedMinute(mealTime.minute);
             setOriginalHour(mealTime.hour);
             setOriginalMinute(mealTime.minute);
         } else {
-            // デフォルト値を設定
             const defaultHour = 12;
             const defaultMinute = 0;
             setSelectedHour(defaultHour);
@@ -89,12 +87,12 @@ export default function MealTimeScreen() {
         if (!selectedMealTime) return;
         try {
             setLoading(true);
-            await mealTimeService.updateMealTime(selectedMealTime.id!,
-                selectedMealTime);
+            await mealTimeService.updateMealTime(selectedMealTime.id!, selectedHour, selectedMinute);
             setShowTimePicker(false);
             await getMealTimes();
             Alert.alert('成功', '通知時間を設定しました');
         } catch (e) {
+            console.log(e);
             Alert.alert('エラー', '通知時間の設定に失敗しました');
         } finally {
             setLoading(false);
@@ -206,7 +204,7 @@ export default function MealTimeScreen() {
                                     styles.saveButton,
                                     !isTimeChanged && styles.saveButtonDisabled
                                 ]}
-                                onPress={handleSaveTime}
+                                onPress={() => handleSaveTime()}
                                 disabled={!isTimeChanged}
                             >
                                 <Text style={[
@@ -224,9 +222,11 @@ export default function MealTimeScreen() {
     };
 
     return (
-        <>
-            <ScrollView style={styles.container}>
-
+        <View style={styles.wrapper}>
+            <ScrollView
+                style={styles.container}
+                contentContainerStyle={styles.scrollContent}
+            >
                 <View style={styles.content}>
                     {mealTimes.length === 0 && !loading ? (
                         <View style={styles.emptyState}>
@@ -253,7 +253,7 @@ export default function MealTimeScreen() {
                                         <Text style={styles.mealLabel}>
                                             {getMealLabel(mealTime.meal_type)}
                                         </Text>
-                                        {mealTime.hour && (
+                                        {mealTime.hour !== undefined && mealTime.hour !== null && (
                                             <Text style={styles.mealTimeText}>
                                                 {DateUtils.numberToTimeString(mealTime.hour, mealTime.minute)}
                                             </Text>
@@ -278,7 +278,6 @@ export default function MealTimeScreen() {
                                             {mealTime.enabled ? 'ON' : 'OFF'}
                                         </Text>
                                     </TouchableOpacity>
-                                    <Text style={styles.chevron}>›</Text>
                                 </View>
                             </TouchableOpacity>
                         ))
@@ -291,6 +290,9 @@ export default function MealTimeScreen() {
                         各カードをタップして通知時間を変更できます
                     </Text>
                 </View>
+                <View style={styles.bannerContainer}>
+                    <MyBanner size={BannerAdSize.MEDIUM_RECTANGLE} />
+                </View>
             </ScrollView>
 
             {renderTimePicker()}
@@ -299,33 +301,20 @@ export default function MealTimeScreen() {
                 title='読み込み中'
                 visible={loading}
             />
-        </>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    wrapper: {
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
-    header: {
-        backgroundColor: '#fff',
-        paddingHorizontal: 20,
-        paddingTop: 24,
-        paddingBottom: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+    container: {
+        flex: 1,
     },
-    headerTitle: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 8,
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
+    scrollContent: {
+        paddingBottom: 60,
     },
     content: {
         padding: 16,
@@ -438,6 +427,10 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#1976d2',
         lineHeight: 20,
+    },
+    bannerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     modalOverlay: {
         flex: 1,

@@ -3,7 +3,7 @@ import { MealTime, MealTimeRow } from "../types/types";
 
 export interface MealTimeRepository {
     getMealTimes: () => Promise<MealTime[]>;
-    updateMealTime: (id: number, mealTime: MealTime) => Promise<void>;
+    updateMealTime: (id: number, hour: number, minute: number) => Promise<void>;
     updateEnabled: (id: number, enabled: boolean) => Promise<void>;
 }
 
@@ -22,10 +22,10 @@ export class MealTimeRepositoryImpl implements MealTimeRepository {
         });
         return mealTimes;
     }
-    async updateMealTime(id: number, mealTime: MealTime): Promise<void> {
+    async updateMealTime(id: number, hour: number, minute: number): Promise<void> {
         await this.db.execute(
-            'UPDATE meal_times SET meal_type = ? hour = ? mimute = ? enabled = ? WHERE id = ?',
-            [mealTime.meal_type, mealTime.hour, mealTime.minute, mealTime.enabled ? 1 : 0, id]
+            'UPDATE meal_times SET hour = ?, minute = ? WHERE id = ?',
+            [hour, minute, id]
         );
     }
 
