@@ -42,6 +42,13 @@ export interface MealPlan {
     updated_at?: string;
 }
 
+export interface MealTime {
+    id?: number;
+    meal_type: 'breakfast' | 'lunch' | 'dinner';
+    hour: number;
+    minute: number;
+}
+
 export interface MealLog {
     id?: number;
     date: string;
