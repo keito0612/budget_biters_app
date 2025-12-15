@@ -47,6 +47,15 @@ export interface MealTime {
     meal_type: 'breakfast' | 'lunch' | 'dinner';
     hour: number;
     minute: number;
+    enabled: boolean;
+}
+
+export interface MealTimeRow {
+    id?: number;
+    meal_type: 'breakfast' | 'lunch' | 'dinner';
+    hour: number;
+    minute: number;
+    enabled: number;
 }
 
 export interface MealLog {

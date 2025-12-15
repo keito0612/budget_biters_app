@@ -37,7 +37,10 @@ export default function MealPlanGenerateScreen() {
                 { text: 'OK', onPress: () => router.back() },
             ]);
         } catch (error: any) {
-            Alert.alert('エラー', error.message);
+            setLoading(false);
+            Alert.alert('エラー', error.message, [
+                { text: 'OK', onPress: () => router.back() },
+            ]);
         } finally {
             setLoading(false);
         }

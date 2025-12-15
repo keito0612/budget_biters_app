@@ -212,6 +212,7 @@ export class DatabaseConnection {
                         meal_type TEXT NOT NULL,
                         hour INTEGER NOT NULL,
                         minute INTEGER NOT NULL,
+                        enabled INTEGER NOT NULL DEFAULT 0,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(meal_type)
                     )`
@@ -310,17 +311,20 @@ export class DatabaseConnection {
             {
                 meal_type: 'breakfast',
                 hour: 7,
-                minute: 0
+                minute: 0,
+                enabled: true
             },
             {
                 meal_type: 'lunch',
                 hour: 12,
-                minute: 0
+                minute: 0,
+                enabled: true
             },
             {
                 meal_type: 'dinner',
                 hour: 18,
-                minute: 0
+                minute: 0,
+                enabled: true
             }
         ];
         await this.execute(`
@@ -348,7 +352,8 @@ VALUES(1, 0)
                 , [
                     defultMenuTime.meal_type,
                     defultMenuTime.hour,
-                    defultMenuTime.minute
+                    defultMenuTime.minute,
+
                 ]
             )
         }

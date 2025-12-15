@@ -70,6 +70,16 @@ export default function SettingScreen() {
                 </View>
                 <View style={styles.section}>
                     <TouchableOpacity style={styles.item} onPress={() => {
+                        router.push('mealTime');
+                    }}>
+                        <MaterialIcons name="notifications" size={24} color="gray" />
+                        <Text style={styles.itemText}>
+                            献立通知
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.section}>
+                    <TouchableOpacity style={styles.item} onPress={() => {
                         router.push('https://keito0612.github.io/budget_biters_praivacy_poricy/');
                     }}>
                         <MaterialIcons name="privacy-tip" size={24} color="gray" />

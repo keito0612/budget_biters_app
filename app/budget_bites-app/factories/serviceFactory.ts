@@ -16,6 +16,9 @@ import { SettingRepositoryImpl } from '../repositories/settingRepository';
 import { SettingService } from '../services/settingService';
 import { AdmobService } from '../services/admobService';
 import { AdmodRepositoryImpl } from '../repositories/admobRepository';
+import { MealTimeRepositoryImpl } from '../repositories/mealTimeRepository';
+import { MealTimeService } from '../services/mealTimeService';
+
 
 export class ServiceFactory {
     // シングルトンのリポジトリインスタンス
@@ -28,6 +31,7 @@ export class ServiceFactory {
     private static authRepo = new AuthRepositoryImpl();
     private static settingRepo = new SettingRepositoryImpl();
     private static admobRepo = new AdmodRepositoryImpl();
+    private static mealTimeRepo = new MealTimeRepositoryImpl();
 
     static createBudgetService(): BudgetService {
         return new BudgetService(this.budgetRepo, this.mealLogRepo);
@@ -39,6 +43,10 @@ export class ServiceFactory {
             this.budgetRepo,
             this.preferencesRepo
         );
+    }
+
+    static createMealTimeService(): MealTimeService {
+        return new MealTimeService(this.mealTimeRepo);
     }
 
     static createAuthService(): AuthService {
