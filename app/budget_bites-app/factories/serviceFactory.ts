@@ -1,3 +1,4 @@
+import { NotificationRepositoryImpl } from './../repositories/notificationRepository';
 
 import {
     PreferencesRepositoryImpl,
@@ -18,6 +19,9 @@ import { AdmobService } from '../services/admobService';
 import { AdmodRepositoryImpl } from '../repositories/admobRepository';
 import { MealTimeRepositoryImpl } from '../repositories/mealTimeRepository';
 import { MealTimeService } from '../services/mealTimeService';
+import { NotificationService } from '../services/notificationService';
+import { BackgroundRepositoryImpl } from '../repositories/backgroundRepository';
+import { BackgroundService } from '../services/backgroundService';
 
 
 export class ServiceFactory {
@@ -32,7 +36,8 @@ export class ServiceFactory {
     private static settingRepo = new SettingRepositoryImpl();
     private static admobRepo = new AdmodRepositoryImpl();
     private static mealTimeRepo = new MealTimeRepositoryImpl();
-
+    private static notificationRepo = new NotificationRepositoryImpl();
+    private static backgroundRepo = new BackgroundRepositoryImpl();
     static createBudgetService(): BudgetService {
         return new BudgetService(this.budgetRepo, this.mealLogRepo);
     }
@@ -63,6 +68,13 @@ export class ServiceFactory {
 
     static createAdmobService(): AdmobService {
         return new AdmobService(this.admobRepo);
+    }
+
+    static createNotificationService(): NotificationService {
+        return new NotificationService(this.notificationRepo);
+    }
+    static createBackgroundService(): BackgroundService {
+        return new BackgroundService(this.backgroundRepo);
     }
 
     // リポジトリへの直接アクセス（必要な場合）

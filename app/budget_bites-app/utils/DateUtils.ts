@@ -9,4 +9,20 @@ export class DateUtils {
         const m = minute.toString().padStart(2, '0');
         return `${h}：${m}`;
     };
+    static formatDate(date: Date): string {
+        return `${date.getMonth}-${date.getDay}`;
+    }
+
+    static isToday(trigger: { date?: string | number | Date }): boolean {
+        if (!trigger.date) return false;
+
+        const triggerDate = new Date(trigger.date);
+        const today = new Date();
+
+        return (
+            triggerDate.getFullYear() === today.getFullYear() &&
+            triggerDate.getMonth() === today.getMonth() &&
+            triggerDate.getDate() === today.getDate()
+        );
+    }
 }

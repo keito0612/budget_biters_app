@@ -6,6 +6,12 @@ import { Budget, MealPlan } from '../../types/types';
 import { ServiceFactory } from '../../factories/serviceFactory';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AdmobService } from '../../services/admobService';
+import * as Notifications from 'expo-notifications';
+import { NotificationData, ScheduleData } from '../../repositories/notificationRepository';
+import { DateUtils } from '../../utils/DateUtils';
+import BackgroundFetch, { HeadlessEvent } from 'react-native-background-fetch';
+
+
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -13,7 +19,11 @@ export default function HomeScreen() {
     const [currentBudget, setCurrentBudget] = useState<Budget | null>(null);
     const [todayMeals, setTodayMeals] = useState<MealPlan[]>([]);
     const [budgetStatus, setBudgetStatus] = useState<any>(null);
-
+    const budgetService = ServiceFactory.createBudgetService();
+    const mealPlanService = ServiceFactory.createMealPlanService();
+    const admodService = ServiceFactory.createAdmobService();
+    const notificationService = ServiceFactory.createNotificationService();
+    const backgroundService = ServiceFactory.createBackgroundService();
     useFocusEffect(
         useCallback(() => {
             loadData();
@@ -22,9 +32,6 @@ export default function HomeScreen() {
     );
 
     const loadData = async () => {
-        const budgetService = ServiceFactory.createBudgetService();
-        const mealPlanService = ServiceFactory.createMealPlanService();
-
         const budget = await budgetService.getCurrentBudget();
         setCurrentBudget(budget);
 
@@ -44,8 +51,11 @@ export default function HomeScreen() {
     };
 
     const initialize = async () => {
-        const admodService = ServiceFactory.createAdmobService();
         await admodService.initializeAds();
+        await notificationService.initializeNotification();
+        await backgroundService.initBackgroundFetch(async () => {
+            await mealPlanService.updateMealPlanTodayNotifications();
+        });
     }
 
     const MonthBudgetCard = ({ currentBudget }: { currentBudget: Budget | null }) => {

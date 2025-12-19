@@ -1,12 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Modal } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { ServiceFactory } from '../factories/serviceFactory';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { MealTime } from '../types/types';
 import { DateUtils } from '../utils/DateUtils';
 import MyBanner from '../components/MyBanner';
 import { BannerAdSize } from "react-native-google-mobile-ads";
+import { NotifaicationPermissionContext } from '../contexts/NotifaicationPermissionContext';
+import NotifacationPermissionBanner from '../components/NotifacationPermissionBanner';
 
 export default function MealTimeScreen() {
     const [loading, setLoading] = useState(false);
@@ -18,8 +21,11 @@ export default function MealTimeScreen() {
     const [originalHour, setOriginalHour] = useState(12);
     const [originalMinute, setOriginalMinute] = useState(0);
     const mealTimeService = ServiceFactory.createMealTimeService();
+    const notifacationContext = useContext(NotifaicationPermissionContext);
 
     const isTimeChanged = selectedHour !== originalHour || selectedMinute !== originalMinute;
+    if (!notifacationContext) return null;
+    const { permisstion } = notifacationContext;
 
     useFocusEffect(
         useCallback(() => {
@@ -42,13 +48,13 @@ export default function MealTimeScreen() {
     const getMealIcon = (type: string) => {
         switch (type) {
             case 'breakfast':
-                return '🌅';
+                return { name: 'sunny' as const, color: '#FF9500' };
             case 'lunch':
-                return '☀️';
+                return { name: 'sunny-outline' as const, color: '#FFCC00' };
             case 'dinner':
-                return '🌙';
+                return { name: 'moon' as const, color: '#000000FF' };
             default:
-                return '🍽️';
+                return { name: 'restaurant' as const, color: '#007AFF' };
         }
     };
 
@@ -165,23 +171,25 @@ export default function MealTimeScreen() {
                                 snapToInterval={50}
                                 decelerationRate="fast"
                             >
-                                {minutes.map((minute) => (
-                                    <TouchableOpacity
-                                        key={minute}
-                                        style={[
-                                            styles.pickerItem,
-                                            selectedMinute === minute && styles.pickerItemSelected
-                                        ]}
-                                        onPress={() => setSelectedMinute(minute)}
-                                    >
-                                        <Text style={[
-                                            styles.pickerText,
-                                            selectedMinute === minute && styles.pickerTextSelected
-                                        ]}>
-                                            {String(minute).padStart(2, '0')}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                                {
+                                    minutes.map((minute) => (
+                                        <TouchableOpacity
+                                            key={minute}
+                                            style={[
+                                                styles.pickerItem,
+                                                selectedMinute === minute && styles.pickerItemSelected
+                                            ]}
+                                            onPress={() => setSelectedMinute(minute)}
+                                        >
+                                            <Text style={[
+                                                styles.pickerText,
+                                                selectedMinute === minute && styles.pickerTextSelected
+                                            ]}>
+                                                {String(minute).padStart(2, '0')}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))
+                                }
                             </ScrollView>
                         </View>
 
@@ -219,7 +227,57 @@ export default function MealTimeScreen() {
                 </View>
             </Modal>
         );
-    };
+    }
+    const mealTimeCard = (mealTime: MealTime) => {
+        const icon = getMealIcon(mealTime.meal_type);
+        return (
+            <TouchableOpacity
+                key={mealTime.id}
+                style={styles.mealTimeCard}
+                onPress={() => handleEditTime(mealTime)}
+                activeOpacity={0.7}
+            >
+                <View style={styles.mealTimeLeft}>
+                    <View style={styles.iconContainer}>
+                        <Ionicons
+                            name={icon.name}
+                            size={32}
+                            color={icon.color}
+                        />
+                    </View>
+                    <View style={styles.mealTimeInfo}>
+                        <Text style={styles.mealLabel}>
+                            {getMealLabel(mealTime.meal_type)}
+                        </Text>
+                        {mealTime.hour !== undefined && mealTime.hour !== null && (
+                            <Text style={styles.mealTimeText}>
+                                {DateUtils.numberToTimeString(mealTime.hour, mealTime.minute)}
+                            </Text>
+                        )}
+                    </View>
+                </View>
+                <View style={styles.mealTimeRight}>
+                    <TouchableOpacity
+                        style={[
+                            styles.statusBadge,
+                            mealTime.enabled ? styles.statusEnabled : styles.statusDisabled
+                        ]}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            toggleEnabled(mealTime);
+                        }}
+                    >
+                        <Text style={[
+                            styles.statusText,
+                            mealTime.enabled ? styles.statusTextEnabled : styles.statusTextDisabled
+                        ]}>
+                            {mealTime.enabled ? 'ON' : 'OFF'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
+        );
+    }
 
     return (
         <View style={styles.wrapper}>
@@ -228,64 +286,24 @@ export default function MealTimeScreen() {
                 contentContainerStyle={styles.scrollContent}
             >
                 <View style={styles.content}>
-                    {mealTimes.length === 0 && !loading ? (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyIcon}>⏰</Text>
-                            <Text style={styles.emptyText}>
-                                通知時間が設定されていません
-                            </Text>
-                        </View>
-                    ) : (
-                        mealTimes.map((mealTime, index) => (
-                            <TouchableOpacity
-                                key={mealTime.id || index}
-                                style={styles.mealTimeCard}
-                                onPress={() => handleEditTime(mealTime)}
-                                activeOpacity={0.7}
-                            >
-                                <View style={styles.mealTimeLeft}>
-                                    <View style={styles.iconContainer}>
-                                        <Text style={styles.mealIcon}>
-                                            {getMealIcon(mealTime.meal_type)}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.mealTimeInfo}>
-                                        <Text style={styles.mealLabel}>
-                                            {getMealLabel(mealTime.meal_type)}
-                                        </Text>
-                                        {mealTime.hour !== undefined && mealTime.hour !== null && (
-                                            <Text style={styles.mealTimeText}>
-                                                {DateUtils.numberToTimeString(mealTime.hour, mealTime.minute)}
-                                            </Text>
-                                        )}
-                                    </View>
+                    {
+                        permisstion ?
+                            mealTimes.length === 0 && !loading ? (
+                                <View style={styles.emptyState}>
+                                    <Ionicons name="alarm-outline" size={64} color="#ccc" />
+                                    <Text style={styles.emptyText}>
+                                        通知時間が設定されていません
+                                    </Text>
                                 </View>
-                                <View style={styles.mealTimeRight}>
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.statusBadge,
-                                            mealTime.enabled ? styles.statusEnabled : styles.statusDisabled
-                                        ]}
-                                        onPress={(e) => {
-                                            e.stopPropagation();
-                                            toggleEnabled(mealTime);
-                                        }}
-                                    >
-                                        <Text style={[
-                                            styles.statusText,
-                                            mealTime.enabled ? styles.statusTextEnabled : styles.statusTextDisabled
-                                        ]}>
-                                            {mealTime.enabled ? 'ON' : 'OFF'}
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </TouchableOpacity>
-                        ))
-                    )}
+                            ) : (
+                                mealTimes.map((mealTime) => {
+                                    return mealTimeCard(mealTime);
+                                })
+                            ) : <NotifacationPermissionBanner />}
                 </View>
 
                 <View style={styles.infoBox}>
-                    <Text style={styles.infoIcon}>💡</Text>
+                    <Ionicons name="bulb" size={20} color="#1976d2" />
                     <Text style={styles.infoText}>
                         各カードをタップして通知時間を変更できます
                     </Text>
@@ -347,9 +365,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginRight: 16,
     },
-    mealIcon: {
-        fontSize: 28,
-    },
     mealTimeInfo: {
         flex: 1,
     },
@@ -401,14 +416,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 60,
     },
-    emptyIcon: {
-        fontSize: 64,
-        marginBottom: 16,
-    },
     emptyText: {
         fontSize: 16,
         color: '#999',
         textAlign: 'center',
+        marginTop: 16,
     },
     infoBox: {
         flexDirection: 'row',
@@ -418,9 +430,6 @@ const styles = StyleSheet.create({
         margin: 16,
         borderRadius: 12,
         gap: 12,
-    },
-    infoIcon: {
-        fontSize: 20,
     },
     infoText: {
         flex: 1,
