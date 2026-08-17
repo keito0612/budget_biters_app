@@ -5,11 +5,13 @@ import { usePremium } from '../../hooks/usePremium';
 import { Budget, MealPlan } from '../../types/types';
 import { ServiceFactory } from '../../factories/serviceFactory';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Ionicons } from '@expo/vector-icons';
 import { AdmobService } from '../../services/admobService';
 import * as Notifications from 'expo-notifications';
 import { NotificationData, ScheduleData } from '../../repositories/notificationRepository';
 import { DateUtils } from '../../utils/DateUtils';
 import BackgroundFetch, { HeadlessEvent } from 'react-native-background-fetch';
+import { useMealPlanGeneration } from '../../contexts/MealPlanGenerationContext';
 
 
 
@@ -19,11 +21,22 @@ export default function HomeScreen() {
     const [currentBudget, setCurrentBudget] = useState<Budget | null>(null);
     const [todayMeals, setTodayMeals] = useState<MealPlan[]>([]);
     const [budgetStatus, setBudgetStatus] = useState<any>(null);
+    const { progress, isGenerating } = useMealPlanGeneration();
+    const [lastCompletedWeeks, setLastCompletedWeeks] = useState(0);
     const budgetService = ServiceFactory.createBudgetService();
     const mealPlanService = ServiceFactory.createMealPlanService();
     const admodService = ServiceFactory.createAdmobService();
     const notificationService = ServiceFactory.createNotificationService();
     const backgroundService = ServiceFactory.createBackgroundService();
+
+    // 生成進捗が変わったらデータを再読み込み
+    useEffect(() => {
+        if (progress.completedWeeks > lastCompletedWeeks) {
+            setLastCompletedWeeks(progress.completedWeeks);
+            loadData();
+        }
+    }, [progress.completedWeeks]);
+
     useFocusEffect(
         useCallback(() => {
             loadData();
@@ -106,6 +119,31 @@ export default function HomeScreen() {
         );
     }
 
+    const GenerationProgressIndicator = () => {
+        if (!isGenerating || progress.status !== 'generating') {
+            return null;
+        }
+
+        return (
+            <View style={styles.progressIndicator}>
+                <View style={styles.progressHeader}>
+                    <Ionicons name="sync" size={16} color="#007AFF" />
+                    <Text style={styles.progressIndicatorText}>
+                        献立を生成中... ({progress.completedWeeks}/{progress.totalWeeks}週)
+                    </Text>
+                </View>
+                <View style={styles.progressBarContainer}>
+                    <View
+                        style={[
+                            styles.progressBar,
+                            { width: `${(progress.completedWeeks / progress.totalWeeks) * 100}%` }
+                        ]}
+                    />
+                </View>
+            </View>
+        );
+    }
+
     return (
         <ScrollView style={styles.container}>
             {currentBudget?.total_budget !== 0 ? (
@@ -123,19 +161,24 @@ export default function HomeScreen() {
 
             <View style={[styles.card, { paddingBottom: 8, marginBottom: 70 }]}>
                 <Text style={styles.cardTitle}>今日の献立</Text>
+                <GenerationProgressIndicator />
                 {todayMeals.length > 0 ? (
                     todayMeals.map((meal, index) =>
                         <TodayMealItems key={index} meal={meal} index={index} />
                     )
                 ) : (
                     <View>
-                        <Text style={styles.noText}>献立が設定されていません。</Text>
-                        <TouchableOpacity
-                            style={styles.generateButton}
-                            onPress={() => router.push('/mealPlanGenerate')}
-                        >
-                            <Text style={styles.generateText}>献立を生成する</Text>
-                        </TouchableOpacity>
+                        {!isGenerating && (
+                            <>
+                                <Text style={styles.noText}>献立が設定されていません。</Text>
+                                <TouchableOpacity
+                                    style={styles.generateButton}
+                                    onPress={() => router.push('/mealPlanGenerate')}
+                                >
+                                    <Text style={styles.generateText}>献立を生成する</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
                     </View>
                 )}
             </View>
@@ -282,5 +325,33 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#007AFF',
         marginTop: 4,
+    },
+    progressIndicator: {
+        backgroundColor: '#E8F4FD',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    progressHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+    progressIndicatorText: {
+        fontSize: 14,
+        color: '#007AFF',
+        fontWeight: '500',
+    },
+    progressBarContainer: {
+        height: 4,
+        backgroundColor: '#D0E4F5',
+        borderRadius: 2,
+        overflow: 'hidden',
+    },
+    progressBar: {
+        height: '100%',
+        backgroundColor: '#007AFF',
+        borderRadius: 2,
     },
 });

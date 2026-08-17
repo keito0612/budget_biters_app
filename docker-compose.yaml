@@ -4,14 +4,18 @@ services:
   expo:
     build: .
     tty: true
+    stdin_open: true
     environment:
       - NODE_ENV=development
-      - REACT_NATIVE_PACKAGER_HOSTNAME=10.41.242.8
+      - REACT_NATIVE_PACKAGER_HOSTNAME=192.168.0.12
     ports:
-      - "19006:19006"
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
     volumes:
       - ./app:/usr/src/app
-    working_dir: /usr/src/app
+    working_dir: /usr/src/app/budget_bites-app
 
 volumes:
   node_modules:

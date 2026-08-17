@@ -4,8 +4,9 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { ServiceFactory } from '../../factories/serviceFactory';
 import { MealPlan } from '../../types/types';
 import { router, useFocusEffect } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
+import { useMealPlanGeneration } from '../../contexts/MealPlanGenerationContext';
 
 // 日本語ロケール設定
 LocaleConfig.locales['ja'] = {
@@ -35,6 +36,8 @@ export default function CalendarScreen() {
     const [allPlans, setAllPlans] = useState<MealPlan[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [loadingMassage, setLoadingMassage] = useState<string>('');
+    const { progress, isGenerating } = useMealPlanGeneration();
+    const [lastCompletedWeeks, setLastCompletedWeeks] = useState(0);
     const today = new Date();
     const year = today.getFullYear();
     const month = today.getMonth() + 1;
@@ -49,6 +52,14 @@ export default function CalendarScreen() {
             selectDate(todayStr);
         }
     }, [allPlans]);
+
+    // 生成進捗が変わったらデータを再読み込み
+    useEffect(() => {
+        if (progress.completedWeeks > lastCompletedWeeks) {
+            setLastCompletedWeeks(progress.completedWeeks);
+            loadMonthData();
+        }
+    }, [progress.completedWeeks]);
 
     useFocusEffect(
         useCallback(() => {
@@ -366,9 +377,35 @@ export default function CalendarScreen() {
         );
     };
 
+    const GenerationProgressBanner = () => {
+        if (!isGenerating || progress.status !== 'generating') {
+            return null;
+        }
+
+        return (
+            <View style={styles.progressBanner}>
+                <View style={styles.progressContent}>
+                    <Ionicons name="sync" size={18} color="#007AFF" />
+                    <Text style={styles.progressText}>
+                        献立を生成中... 第{progress.currentWeek}週 ({progress.completedWeeks}/{progress.totalWeeks})
+                    </Text>
+                </View>
+                <View style={styles.progressBarContainer}>
+                    <View
+                        style={[
+                            styles.progressBar,
+                            { width: `${(progress.completedWeeks / progress.totalWeeks) * 100}%` }
+                        ]}
+                    />
+                </View>
+            </View>
+        );
+    };
+
     return (
         <>
             <View style={styles.container}>
+                <GenerationProgressBanner />
                 <Calendar
                     hideArrows={true}
                     markedDates={{
@@ -550,5 +587,34 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         alignSelf: 'center',
         marginLeft: 10,
+    },
+    progressBanner: {
+        backgroundColor: '#E8F4FD',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#B8D4E8',
+    },
+    progressContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+    progressText: {
+        fontSize: 14,
+        color: '#007AFF',
+        fontWeight: '500',
+    },
+    progressBarContainer: {
+        height: 4,
+        backgroundColor: '#D0E4F5',
+        borderRadius: 2,
+        overflow: 'hidden',
+    },
+    progressBar: {
+        height: '100%',
+        backgroundColor: '#007AFF',
+        borderRadius: 2,
     },
 });

@@ -8,6 +8,14 @@ import { MealPlan } from "../types/types";
 import { DateUtils } from "../utils/DateUtils";
 import { MealUtils } from "../utils/MealUtils";
 
+export interface GenerationProgress {
+    totalWeeks: number;
+    completedWeeks: number;
+    currentWeek: number;
+    status: 'idle' | 'generating' | 'completed' | 'error';
+    error?: string;
+}
+
 export class MealPlanService {
     constructor(
         private mealPlanRepo: MealPlanRepository,
@@ -28,6 +36,81 @@ export class MealPlanService {
 
         await this.mealPlanRepo.deleteByMonth(month);
         await this.mealPlanRepo.bulkSave(response.plans);
+    }
+
+    /**
+     * 段階的に月間献立を生成する
+     * 週単位で生成し、最初の週が完了したらコールバックを呼び出す
+     */
+    async generateMonthlyPlanProgressively(
+        month: string,
+        onProgress: (progress: GenerationProgress) => void,
+        onFirstWeekComplete: () => void
+    ): Promise<void> {
+        const budget = await this.budgetRepo.get();
+        if (!budget) throw new Error('予算が設定されていません');
+
+        const preferences = await this.preferencesRepo.get();
+        const weekRanges = DateUtils.getWeekRanges(month);
+        const totalWeeks = weekRanges.length;
+
+        // 最初に既存の献立を削除
+        await this.mealPlanRepo.deleteByMonth(month);
+
+        // 既存のメニュー名を追跡（重複回避用）
+        let existingMenuNames: string[] = [];
+
+        for (let i = 0; i < weekRanges.length; i++) {
+            const week = weekRanges[i];
+
+            // 進捗を通知
+            onProgress({
+                totalWeeks,
+                completedWeeks: i,
+                currentWeek: i + 1,
+                status: 'generating',
+            });
+
+            try {
+                const response = await GeminiService.generateWeeklyMealPlan({
+                    startDate: week.startDate,
+                    endDate: week.endDate,
+                    budget,
+                    preferences,
+                    existingMenuNames: existingMenuNames.slice(-30), // 直近30件のメニュー名
+                });
+
+                // 生成された献立を保存
+                await this.mealPlanRepo.bulkSave(response.plans);
+
+                // メニュー名を追加
+                const newMenuNames = response.plans.map(plan => plan.menu_name);
+                existingMenuNames = [...existingMenuNames, ...newMenuNames];
+
+                // 最初の週が完了したらコールバックを呼び出す
+                if (i === 0) {
+                    onFirstWeekComplete();
+                }
+
+                // 進捗を更新
+                onProgress({
+                    totalWeeks,
+                    completedWeeks: i + 1,
+                    currentWeek: i + 1,
+                    status: i === weekRanges.length - 1 ? 'completed' : 'generating',
+                });
+
+            } catch (error: any) {
+                onProgress({
+                    totalWeeks,
+                    completedWeeks: i,
+                    currentWeek: i + 1,
+                    status: 'error',
+                    error: error.message,
+                });
+                throw error;
+            }
+        }
     }
 
     async regenerateTodayMeal(
