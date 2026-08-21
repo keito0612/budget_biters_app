@@ -14,8 +14,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "org.name.budgetbitesapp",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "UIBackgroundModes": [
           "fetch",
