@@ -2,7 +2,7 @@
   "expo": {
     "name": "budget_bites-app",
     "slug": "budget_bites-app",
-    "scheme": "budget_bites-app",
+    "scheme": "budgetbites",
     "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
