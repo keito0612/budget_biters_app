@@ -3,7 +3,7 @@
     "name": "budget_bites-app",
     "slug": "budget_bites-app",
     "scheme": "budget_bites-app",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,17 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.budget-bites-app",
+      "bundleIdentifier": "org.name.budgetbitesapp",
       "infoPlist": {
         "UIBackgroundModes": [
-          "fetch",
-          "processing",
           "fetch",
           "processing"
         ],
         "BGTaskSchedulerPermittedIdentifiers": [
-          "com.anonymous.budget-bites-app.fetch",
-          "com.anonymous.budget-bites-app.fetch"
+          "org.name.budgetbitesapp.fetch"
         ],
         "ITSAppUsesNonExemptEncryption": false
       }

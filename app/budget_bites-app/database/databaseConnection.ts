@@ -12,7 +12,7 @@ export class DatabaseConnection {
     private static instance: DatabaseConnection;
     private db: SQLite.SQLiteDatabase | null = null;
     private migrationCompleted: boolean = false;
-    private readonly CURRENT_VERSION = 2;
+    private readonly CURRENT_VERSION = 4;
 
     private constructor() { }
 
@@ -53,21 +53,27 @@ export class DatabaseConnection {
     }
 
     async execute(query: string, params?: any[]): Promise<SQLite.SQLiteRunResult | void> {
-        let result: SQLite.SQLiteRunResult | undefined = undefined;
-        await this.getDatabase().withTransactionAsync(async () => {
-            if (params && params.length > 0) {
-                result = await this.getDatabase().runAsync(query, params);
-            } else {
-                await this.getDatabase().execAsync(query);
-            }
-        });
-        if (result !== undefined) {
-            return result;
+        if (params && params.length > 0) {
+            return await this.getDatabase().runAsync(query, params);
+        } else {
+            await this.getDatabase().execAsync(query);
         }
     }
 
     async query<T>(query: string, params: any[] = []): Promise<T[]> {
         return await this.getDatabase().getAllAsync<T>(query, params);
+    }
+
+    /**
+     * トランザクション内で複数の操作を実行する
+     * 全ての操作が成功するか、全て失敗するかを保証する
+     */
+    async withTransaction<T>(callback: () => Promise<T>): Promise<T> {
+        let result: T;
+        await this.getDatabase().withTransactionAsync(async () => {
+            result = await callback();
+        });
+        return result!;
     }
 
     private async createMigrationTable(): Promise<void> {
@@ -218,6 +224,38 @@ export class DatabaseConnection {
                     )`
                 ],
                 down: ['DROP TABLE IF EXISTS  meal_times']
+            },
+            {
+                version: 3,
+                name: 'add_shopping_list_checks',
+                up: [
+                    `CREATE TABLE IF NOT EXISTS shopping_list_checks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        week_start TEXT NOT NULL,
+                        ingredient_name TEXT NOT NULL,
+                        is_checked INTEGER DEFAULT 0,
+                        checked_at TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(week_start, ingredient_name)
+                    )`
+                ],
+                down: ['DROP TABLE IF EXISTS shopping_list_checks']
+            },
+            {
+                version: 4,
+                name: 'add_ai_usage_limits',
+                up: [
+                    `CREATE TABLE IF NOT EXISTS ai_usage_limits (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        action_type TEXT NOT NULL,
+                        year_month TEXT NOT NULL,
+                        usage_count INTEGER DEFAULT 0,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(action_type, year_month)
+                    )`
+                ],
+                down: ['DROP TABLE IF EXISTS ai_usage_limits']
             }
         ];
     }
@@ -327,36 +365,38 @@ export class DatabaseConnection {
                 enabled: true
             }
         ];
-        await this.execute(`
-            INSERT OR IGNORE INTO preferences(id, taste_preference, allergies, avoid_ingredients)
-VALUES(1, 'balanced', '[]', '[]')
-    `);
-        await this.execute(`
-            INSERT OR IGNORE INTO premium_status(id, is_premium)
-VALUES(1, 0)
-    `);
-        await this.execute(`
-            INSERT OR IGNORE INTO auth(id, is_logged_in)
-VALUES(1, 0)
-    `);
-        await this.execute(`
-            INSERT OR IGNORE INTO backup_settings(id, auto_backup)
-VALUES(1, 0)
-    `);
-        await this.execute(
-            'INSERT OR IGNORE INTO budgets (id, total_budget, daily_budget) VALUES(1, 0, 0)'
-        );
-        for (const defultMenuTime of defultMenuTimes) {
-            await this.execute(
-                `INSERT OR IGNORE INTO meal_times (meal_type, hour, minute) VALUES(?, ?, ?)`
-                , [
-                    defultMenuTime.meal_type,
-                    defultMenuTime.hour,
-                    defultMenuTime.minute,
 
-                ]
-            )
-        }
+        await this.withTransaction(async () => {
+            await this.execute(`
+                INSERT OR IGNORE INTO preferences(id, taste_preference, allergies, avoid_ingredients)
+                VALUES(1, 'balanced', '[]', '[]')
+            `);
+            await this.execute(`
+                INSERT OR IGNORE INTO premium_status(id, is_premium)
+                VALUES(1, 0)
+            `);
+            await this.execute(`
+                INSERT OR IGNORE INTO auth(id, is_logged_in)
+                VALUES(1, 0)
+            `);
+            await this.execute(`
+                INSERT OR IGNORE INTO backup_settings(id, auto_backup)
+                VALUES(1, 0)
+            `);
+            await this.execute(
+                'INSERT OR IGNORE INTO budgets (id, total_budget, daily_budget) VALUES(1, 0, 0)'
+            );
+            for (const defultMenuTime of defultMenuTimes) {
+                await this.execute(
+                    `INSERT OR IGNORE INTO meal_times (meal_type, hour, minute) VALUES(?, ?, ?)`
+                    , [
+                        defultMenuTime.meal_type,
+                        defultMenuTime.hour,
+                        defultMenuTime.minute,
+                    ]
+                )
+            }
+        });
     }
 }
 export const dbConnection = DatabaseConnection.getInstance();

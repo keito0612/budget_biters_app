@@ -319,13 +319,24 @@ EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key
 
 ### 起動
 
-```bash
-# 開発サーバーの起動
-npx expo start
+#### 開発ビルドの作成（初回のみ）
 
-# iOSシミュレーターで起動
-npx expo start --ios
+```bash
+# iOS シミュレーター用の開発ビルドを作成
+npx eas-cli build --profile development-simulator --platform ios
 ```
+
+#### シミュレーターへのインストールと起動
+
+```bash
+# ビルドをダウンロードしてシミュレーターにインストール
+npx eas-cli build:run --platform ios
+
+# ネイティブビルドを実行 
+npx expo run:ios 
+```
+
+シミュレーターでアプリを開くと、開発サーバーに自動接続されます。
 
 ## ライセンス
 

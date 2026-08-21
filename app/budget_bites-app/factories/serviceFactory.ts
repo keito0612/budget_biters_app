@@ -22,6 +22,9 @@ import { MealTimeService } from '../services/mealTimeService';
 import { NotificationService } from '../services/notificationService';
 import { BackgroundRepositoryImpl } from '../repositories/backgroundRepository';
 import { BackgroundService } from '../services/backgroundService';
+import { ShoppingListRepositoryImpl } from '../repositories/shoppingListRepository';
+import { ShoppingListService } from '../services/shoppingListService';
+import { AIUsageLimitRepositoryImpl } from '../repositories/aiUsageLimitRepository';
 
 
 export class ServiceFactory {
@@ -38,6 +41,9 @@ export class ServiceFactory {
     private static mealTimeRepo = new MealTimeRepositoryImpl();
     private static notificationRepo = new NotificationRepositoryImpl();
     private static backgroundRepo = new BackgroundRepositoryImpl();
+    private static shoppingListRepo = new ShoppingListRepositoryImpl();
+    private static aiUsageLimitRepo = new AIUsageLimitRepositoryImpl();
+
     static createBudgetService(): BudgetService {
         return new BudgetService(this.budgetRepo, this.mealLogRepo);
     }
@@ -59,7 +65,7 @@ export class ServiceFactory {
     }
 
     static createPremiumService(): PremiumService {
-        return new PremiumService(this.premiumStatusRepo);
+        return new PremiumService(this.premiumStatusRepo, this.aiUsageLimitRepo);
     }
 
     static createSettingService(): SettingService {
@@ -75,6 +81,10 @@ export class ServiceFactory {
     }
     static createBackgroundService(): BackgroundService {
         return new BackgroundService(this.backgroundRepo);
+    }
+
+    static createShoppingListService(): ShoppingListService {
+        return new ShoppingListService(this.shoppingListRepo, this.mealPlanRepo);
     }
 
     // リポジトリへの直接アクセス（必要な場合）

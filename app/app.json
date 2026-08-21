@@ -1,5 +1,10 @@
 {
   "plugins": [
     "expo-sqlite"
-  ]
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "e5eda57e-b000-4593-aab7-f042bb1f4d17"
+    }
+  }
 }

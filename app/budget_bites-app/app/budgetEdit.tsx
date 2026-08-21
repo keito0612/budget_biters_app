@@ -12,10 +12,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ServiceFactory } from '../factories/serviceFactory';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { Budget } from '../types/types';
+import { usePremium } from '../hooks/usePremium';
 
 
 export default function BudgetEditScreen() {
     const router = useRouter();
+    const { isPremium } = usePremium();
     const [budget, setBudget] = useState('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [currentMonth, setCurrentMonth] = useState('');
@@ -74,13 +76,27 @@ export default function BudgetEditScreen() {
         try {
             const budgetService = ServiceFactory.createBudgetService();
             await budgetService.updateBudget(budgetNum);
-            Alert.alert('成功', '予算を変更しましたので、献立を再生成します。', [
-                {
-                    text: 'OK', onPress: async () => {
-                        await handleGenerate();
-                    }
-                },
-            ]);
+
+            if (isPremium) {
+                // プレミアム会員は再生成可能
+                Alert.alert('成功', '予算を変更しましたので、献立を再生成します。', [
+                    {
+                        text: 'OK', onPress: async () => {
+                            await handleGenerate();
+                        }
+                    },
+                ]);
+            } else {
+                // 無料会員は再生成不可
+                Alert.alert(
+                    '予算を変更しました',
+                    '献立の再生成はプレミアム会員限定機能です。\n現在の献立はそのままご利用いただけます。',
+                    [
+                        { text: 'プレミアムに登録', onPress: () => router.push('/subscription') },
+                        { text: 'OK', onPress: () => router.back() },
+                    ]
+                );
+            }
         } catch (error: any) {
             Alert.alert('エラー', error.message);
         }

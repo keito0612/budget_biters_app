@@ -5,7 +5,7 @@ import { GenerationProgress } from '../services/mealPlanService';
 interface MealPlanGenerationContextType {
     progress: GenerationProgress;
     isGenerating: boolean;
-    startGeneration: (month: string, onFirstWeekComplete: () => void) => Promise<void>;
+    startBackgroundGeneration: (month: string) => Promise<void>;
     cancelGeneration: () => void;
 }
 
@@ -23,10 +23,8 @@ export function MealPlanGenerationProvider({ children }: { children: React.React
     const [isGenerating, setIsGenerating] = useState(false);
     const isCancelledRef = useRef(false);
 
-    const startGeneration = useCallback(async (
-        month: string,
-        onFirstWeekComplete: () => void
-    ): Promise<void> => {
+    // バックグラウンドで1ヶ月分を生成し、完了時に通知を送信
+    const startBackgroundGeneration = useCallback(async (month: string): Promise<void> => {
         if (isGenerating) {
             return;
         }
@@ -34,14 +32,22 @@ export function MealPlanGenerationProvider({ children }: { children: React.React
         setIsGenerating(true);
         isCancelledRef.current = false;
 
+        // 初期状態を設定
+        setProgress({
+            totalWeeks: 4, // 仮の値、実際の値は生成時に更新される
+            completedWeeks: 0,
+            currentWeek: 1,
+            status: 'generating',
+        });
+
+        // 非同期で生成を開始（awaitしない）
+        generateInBackground(month);
+    }, [isGenerating]);
+
+    const generateInBackground = async (month: string) => {
         try {
             const mealPlanService = ServiceFactory.createMealPlanService();
-            const budgetService = ServiceFactory.createBudgetService();
-
-            const currentBudget = await budgetService.getCurrentBudget();
-            if (currentBudget?.total_budget === 0) {
-                throw new Error('初期設定をしてください。');
-            }
+            const notificationService = ServiceFactory.createNotificationService();
 
             await mealPlanService.generateMonthlyPlanProgressively(
                 month,
@@ -51,23 +57,44 @@ export function MealPlanGenerationProvider({ children }: { children: React.React
                     }
                 },
                 () => {
-                    if (!isCancelledRef.current) {
-                        onFirstWeekComplete();
-                    }
+                    // 最初の週完了コールバック（今は使わない）
                 }
             );
 
+            // 生成完了 - 通知を送信
+            if (!isCancelledRef.current) {
+                setProgress(prev => ({
+                    ...prev,
+                    status: 'completed',
+                }));
+
+                await notificationService.sendImmediateNotification({
+                    title: '献立の生成が完了しました 🎉',
+                    body: `${month}の献立が完成しました。カレンダーで確認してください。`,
+                    data: { type: 'meal_plan_complete', month },
+                });
+            }
+
         } catch (error: any) {
-            setProgress(prev => ({
-                ...prev,
-                status: 'error',
-                error: error.message,
-            }));
-            throw error;
+            if (!isCancelledRef.current) {
+                setProgress(prev => ({
+                    ...prev,
+                    status: 'error',
+                    error: error.message,
+                }));
+
+                // エラー通知
+                const notificationService = ServiceFactory.createNotificationService();
+                await notificationService.sendImmediateNotification({
+                    title: '献立の生成に失敗しました',
+                    body: error.message || 'エラーが発生しました。再度お試しください。',
+                    data: { type: 'meal_plan_error' },
+                });
+            }
         } finally {
             setIsGenerating(false);
         }
-    }, [isGenerating]);
+    };
 
     const cancelGeneration = useCallback(() => {
         isCancelledRef.current = true;
@@ -80,7 +107,7 @@ export function MealPlanGenerationProvider({ children }: { children: React.React
             value={{
                 progress,
                 isGenerating,
-                startGeneration,
+                startBackgroundGeneration,
                 cancelGeneration,
             }}
         >

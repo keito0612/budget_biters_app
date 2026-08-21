@@ -3,24 +3,25 @@ export const Config = {
         url: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
         anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
     },
-    stripe: {
-        publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
-        priceId: 'price_xxx', // Stripe Price ID
-        successUrl: process.env.EXPO_PUBLIC_STRIPE_SUCCESS_URL || '',
-        cancelUrl: process.env.EXPO_PUBLIC_STRIPE_CANCEL_URL || '',
+    revenueCat: {
+        appleApiKey: process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY || '',
+        googleApiKey: process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY || '',
+        entitlementId: 'premium', // RevenueCatで設定するEntitlement ID
+        productId: 'budget_bites_premium_monthly', // App Store/Google Playの商品ID
     },
     gemini: {
         apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY || '',
         model: 'gemini-2.5-flash',
     },
     premium: {
-        monthlyPrice: 400,
+        monthlyPrice: 500,
         features: [
-            'AI献立生成 無制限',
-            '日別AI再提案 無制限',
-            'AI月間リプランニング 無制限',
-            'Supabaseバックアップ 無制限',
-            'Supabase完全復元',
+            '広告非表示',
+            '月間献立生成 無制限（無料版: 月1回）',
+            '1日の献立変更 無制限（無料版: 月3回）',
+            '個別メニュー変更 無制限（無料版: 月5回）',
+            '予算変更後の献立再生成',
+            'クラウドバックアップ（近日公開）',
         ],
     },
 };

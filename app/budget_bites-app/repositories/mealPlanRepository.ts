@@ -71,9 +71,11 @@ export class MealPlanRepositoryImpl implements MealPlanRepository {
     }
 
     async bulkSave(plans: Omit<MealPlan, 'id' | 'created_at' | 'updated_at'>[]): Promise<void> {
-        for (const plan of plans) {
-            await this.save(plan);
-        }
+        await dbConnection.withTransaction(async () => {
+            for (const plan of plans) {
+                await this.save(plan);
+            }
+        });
     }
 
     async deleteByMonth(month: string): Promise<void> {

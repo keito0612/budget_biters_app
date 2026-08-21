@@ -9,6 +9,8 @@ import { AlertDialog } from '../../components/AlertDialog';
 import { AlertType } from '../../types/types';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/build/MaterialIcons';
+import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 
 export default function SettingScreen() {
     const router = useRouter();
@@ -47,6 +49,37 @@ export default function SettingScreen() {
         router.push("/preferenceSetUp?mode=edit");
     }
 
+    const handleReviewApp = async () => {
+        try {
+            // App Store / Google Play のレビューページを開く
+            const appId = Constants.expoConfig?.ios?.bundleIdentifier || 'com.example.app';
+            const androidPackage = Constants.expoConfig?.android?.package || 'com.example.app';
+
+            let storeUrl: string;
+            if (Platform.OS === 'ios') {
+                // App Storeのレビューページ（アプリIDが必要な場合は変更）
+                storeUrl = `https://apps.apple.com/jp/app/ai%E7%8C%AE%E7%AB%8B%E4%BD%9C%E6%88%90%E3%82%A2%E3%83%97%E3%83%AAbudgetbiters/id6756218102`;
+            } else {
+                // Google Playのレビューページ
+                storeUrl = `market://details?id=${androidPackage}`;
+            }
+
+            const canOpen = await Linking.canOpenURL(storeUrl);
+            if (canOpen) {
+                await Linking.openURL(storeUrl);
+            } else {
+                // フォールバック: ブラウザで開く
+                if (Platform.OS === 'ios') {
+                    await Linking.openURL(`https://apps.apple.com/jp/app/ai%E7%8C%AE%E7%AB%8B%E4%BD%9C%E6%88%90%E3%82%A2%E3%83%97%E3%83%AAbudgetbiters/id6756218102`);
+                } else {
+                    await Linking.openURL(`https://play.google.com/store/apps/details?id=${androidPackage}`);
+                }
+            }
+        } catch (error: any) {
+            Alert.alert('エラー', 'ストアを開けませんでした');
+        }
+    }
+
     return (
         <>
             <ScrollView style={styles.container}>
@@ -75,6 +108,14 @@ export default function SettingScreen() {
                         <MaterialIcons name="notifications" size={24} color="gray" />
                         <Text style={styles.itemText}>
                             献立通知
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.section}>
+                    <TouchableOpacity style={styles.item} onPress={handleReviewApp}>
+                        <MaterialIcons name="star-rate" size={24} color="#FFD700" />
+                        <Text style={styles.itemText}>
+                            アプリを評価する
                         </Text>
                     </TouchableOpacity>
                 </View>

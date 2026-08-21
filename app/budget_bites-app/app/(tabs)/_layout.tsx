@@ -5,9 +5,10 @@ import MyBanner from "../../components/MyBanner";
 import { CustomHeader } from "../../components/custom/CustomHeader";
 import { BannerAdSize } from "react-native-google-mobile-ads";
 import { Platform, Dimensions } from 'react-native';
+import { usePremium } from "../../hooks/usePremium";
 
 export default function TabLayout() {
-
+    const { isPremium } = usePremium();
     const { height, width } = Dimensions.get('window');
     // 画面高さが700px未満のiOSデバイスをSE系と見なす
     const IS_IPHONE_SE_2_3 = Platform.OS === 'ios' && height < 700;
@@ -61,14 +62,16 @@ export default function TabLayout() {
                     }}
                 />
             </Tabs>
-            <View
-                style={[
-                    staticStyles.baseBannerContainer,
-                    { bottom: bannerBottomValue }
-                ]}
-            >
-                <MyBanner size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
-            </View>
+            {!isPremium && (
+                <View
+                    style={[
+                        staticStyles.baseBannerContainer,
+                        { bottom: bannerBottomValue }
+                    ]}
+                >
+                    <MyBanner size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+                </View>
+            )}
         </View>
     );
 }

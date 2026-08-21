@@ -210,6 +210,13 @@ export default function CalendarScreen() {
         setIsLoading(true);
         setLoadingMassage('献立を変更中');
         try {
+            // 使用制限チェック
+            const premiumService = ServiceFactory.createPremiumService();
+            await premiumService.checkAIUsageLimit('daily_regeneration');
+
+            // 使用回数をインクリメント
+            await premiumService.incrementAIUsage('daily_regeneration');
+
             const mealPlanService = ServiceFactory.createMealPlanService();
             await mealPlanService.regenerateTodayMeal(selectedDate!);
             Alert.alert('成功', '献立を生成しました！', [
@@ -222,7 +229,14 @@ export default function CalendarScreen() {
                 },
             ]);
         } catch (error: any) {
-            Alert.alert('エラー', error.message);
+            if (error.message.includes('プレミアム会員')) {
+                Alert.alert('無料回数を超えました', error.message, [
+                    { text: 'プレミアムに登録', onPress: () => router.push('/subscription') },
+                    { text: 'キャンセル', style: 'cancel' },
+                ]);
+            } else {
+                Alert.alert('エラー', error.message);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -280,6 +294,10 @@ export default function CalendarScreen() {
                 ]}>
                     {formatDate(selectedDate)}
                 </Text>
+                <TouchableOpacity style={styles.shoppingListButton} onPress={handleShoppingList}>
+                    <Ionicons name="cart-outline" size={22} color="#007AFF" />
+                    <Text style={styles.shoppingListButtonText}>買い物リスト</Text>
+                </TouchableOpacity>
             </View>
         );
     };
@@ -402,6 +420,13 @@ export default function CalendarScreen() {
         );
     };
 
+    const handleShoppingList = () => {
+        router.push({
+            pathname: '/shoppingList',
+            params: { date: selectedDate }
+        });
+    };
+
     return (
         <>
             <View style={styles.container}>
@@ -480,11 +505,28 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
         backgroundColor: '#fafafa',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     dateTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#333',
+    },
+    shoppingListButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#E8F4FD',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+        gap: 4,
+    },
+    shoppingListButtonText: {
+        color: '#007AFF',
+        fontSize: 13,
+        fontWeight: '500',
     },
     holidayText: {
         color: '#ff0000',

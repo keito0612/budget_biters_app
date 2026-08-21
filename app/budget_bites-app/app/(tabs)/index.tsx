@@ -35,7 +35,12 @@ export default function HomeScreen() {
             setLastCompletedWeeks(progress.completedWeeks);
             loadData();
         }
-    }, [progress.completedWeeks]);
+        // 生成完了時にもデータを再読み込み
+        if (progress.status === 'completed') {
+            loadData();
+            setLastCompletedWeeks(0); // リセット
+        }
+    }, [progress.completedWeeks, progress.status]);
 
     useFocusEffect(
         useCallback(() => {

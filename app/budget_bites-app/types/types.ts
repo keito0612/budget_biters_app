@@ -110,3 +110,42 @@ export interface BackupData {
 }
 
 export type AlertType = 'success' | 'warning' | 'error';
+
+export interface ShoppingListItem {
+    ingredientName: string;
+    totalAmount: string;        // "200g + 100g"
+    totalCost: number;
+    meals: {
+        date: string;
+        mealType: 'breakfast' | 'lunch' | 'dinner';
+        menuName: string;
+        amount: string;
+    }[];
+    isChecked: boolean;
+}
+
+export interface ShoppingListCheck {
+    id?: number;
+    week_start: string;
+    ingredient_name: string;
+    is_checked: number;
+    checked_at?: string;
+    created_at?: string;
+}
+
+export type AIActionType = 'monthly_generation' | 'daily_regeneration' | 'meal_regeneration';
+
+export interface AIUsageLimit {
+    id?: number;
+    action_type: AIActionType;
+    year_month: string; // YYYY-MM
+    usage_count: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export const FREE_USAGE_LIMITS: Record<AIActionType, number> = {
+    monthly_generation: 1,      // 月間献立生成: 月1回
+    daily_regeneration: 3,      // 1日の献立変更: 月3回
+    meal_regeneration: 5,       // 個別メニュー変更: 月5回
+};
