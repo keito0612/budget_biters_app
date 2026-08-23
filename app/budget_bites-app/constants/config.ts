@@ -7,7 +7,7 @@ export const Config = {
         appleApiKey: process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY || '',
         googleApiKey: process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY || '',
         entitlementId: 'premium', // RevenueCatで設定するEntitlement ID
-        productId: 'budget_bites_premium_monthly', // App Store/Google Playの商品ID
+        productId: 'budget_bites_premium_monthly_8_24', // App Store/Google Playの商品ID
     },
     gemini: {
         apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY || '',
