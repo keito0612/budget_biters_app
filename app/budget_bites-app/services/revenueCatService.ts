@@ -20,7 +20,7 @@ export class RevenueCatService {
             ? Config.revenueCat.appleApiKey
             : Config.revenueCat.googleApiKey;
 
-        if (!apiKey) {
+        if (!apiKey || apiKey.trim() === '') {
             console.warn('RevenueCat API key not configured');
             this.configurationFailed = true;
             return false;
@@ -32,8 +32,9 @@ export class RevenueCatService {
             await Purchases.configure({ apiKey });
             this.initialized = true;
             return true;
-        } catch (error) {
-            console.error('RevenueCat configuration failed:', error);
+        } catch (error: any) {
+            // ネイティブモジュールの例外を安全にキャッチ
+            console.error('RevenueCat configuration failed:', error?.message || error);
             this.configurationFailed = true;
             return false;
         }

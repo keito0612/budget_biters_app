@@ -315,7 +315,41 @@ EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 EXPO_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key
+EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=your_revenuecat_key
 ```
+
+### EAS環境変数の設定
+
+EASビルド時に使用する環境変数の設定手順です。
+
+#### 環境変数の確認
+
+```bash
+npx eas-cli env:list --environment production
+```
+
+#### 環境変数の設定（新規作成・更新）
+
+```bash
+npx eas-cli env:set --name EXPO_PUBLIC_GEMINI_API_KEY --value "YOUR_API_KEY" --visibility sensitive --environment production --non-interactive
+npx eas-cli env:set --name EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY --value "YOUR_API_KEY" --visibility sensitive --environment production --non-interactive
+```
+
+#### 環境変数の削除と再作成
+
+「既に存在する」エラーが出た場合は、まず削除してから再作成します。
+
+```bash
+# 削除
+npx eas-cli env:delete --variable-name EXPO_PUBLIC_GEMINI_API_KEY --non-interactive
+npx eas-cli env:delete --variable-name EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY --non-interactive
+
+# 再作成
+npx eas-cli env:set --name EXPO_PUBLIC_GEMINI_API_KEY --value "YOUR_API_KEY" --visibility sensitive --environment production --non-interactive
+npx eas-cli env:set --name EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY --value "YOUR_API_KEY" --visibility sensitive --environment production --non-interactive
+```
+
+> **注意**: `EXPO_PUBLIC_` プレフィックスの変数は `--visibility secret` が使用できません（ビルド時にクライアントコードに埋め込まれるため）。`sensitive` を使用してください。
 
 ### 起動
 
